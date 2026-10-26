@@ -1,0 +1,703 @@
+// ChronoSwap — full data model for ALL phases (Phase 0 foundation).
+//
+// Hard rules (see CLAUDE.md):
+//   * Time balances are INTEGER MINUTES. Never floats. 0.5h = 30.
+//   * Every wallet change writes a LedgerEntry inside the same transaction.
+//     ledger_entries is append-only: a DB trigger rejects UPDATE/DELETE/TRUNCATE.
+//   * All DateTime columns are timestamptz and hold UTC instants.
+//   * Recurring weekly availability is stored as local wall-clock time + IANA zone
+//     (the only DST-safe representation); concrete instants (sessions) are UTC.
+//   * CHECK / EXCLUDE constraints and triggers that Prisma cannot express live in
+//     prisma/migrations/*_init/migration.sql (section "Hand-written constraints").
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+/// FR-1.1: two roles. ADMIN accounts are created only by the seed script.
+enum Role {
+  USER
+  ADMIN
+}
+
+/// FR-1.3
+enum SkillListKind {
+  OFFERED
+  WANTED
+}
+
+/// FR-3.4: barter sessions run like normal sessions but without escrow.
+enum SessionKind {
+  DIRECT
+  BARTER
+}
+
+/// See docs/SESSION_STATE_MACHINE.md for every allowed transition.
+enum SessionStatus {
+  PENDING // FR-4.1 requested, hours frozen (FR-2.2)
+  ACCEPTED // FR-4.2 teacher accepted; room open (FR-5.1)
+  IN_PROGRESS // both participants joined (FR-5.1)
+  REJECTED // FR-4.2 teacher rejected → refund (FR-2.4)
+  AUTO_REJECTED // FR-4.2 no answer before start → refund (FR-2.4)
+  CANCELLED // FR-4.6 cancelled in time → refund (FR-2.4)
+  NO_SHOW_TEACHER // FR-4.6 teacher absent / late-cancelled → refund
+  NO_SHOW_LEARNER // FR-4.6 learner absent / late-cancelled → teacher paid
+  NO_SHOW_BOTH // FR-4.6 edge case (docs/QUESTIONS.md) → refund
+  ENDED // FR-6.1 ended, ≥50% agenda; awaiting AI quiz or 48h (FR-8.5)
+  QUIZ_PENDING // FR-8.3 quiz available; release on solve or 48h (FR-8.4)
+  DISPUTED // FR-6.4 reported, or FR-6.1 auto-referred (<50%)
+  RELEASED // FR-2.3 hours moved to teacher (terminal)
+  RESOLVED_REFUNDED // FR-7.2 admin → refund learner (terminal)
+  RESOLVED_RELEASED // FR-7.2 admin → pay teacher (terminal)
+  BARTER_COMPLETED // FR-3.4 barter session done, waiting on the rest of the cycle
+  BARTER_SETTLED // FR-3.4 whole cycle completed, nothing to transfer (terminal)
+}
+
+enum SessionEndReason {
+  COMPLETE_BUTTON // FR-6.1
+  TIMER_EXPIRED // FR-6.1 / FR-4.5
+}
+
+/// FR-4.3 / FR-4.4
+enum AgendaSource {
+  AI
+  FALLBACK
+}
+
+/// FR-4.4 fallback split: 25% theory / 50% practice / 25% review.
+enum AgendaPhase {
+  THEORY
+  PRACTICE
+  REVIEW
+}
+
+/// FR-5.1
+enum AttendanceEvent {
+  JOIN
+  LEAVE
+}
+
+/// FR-6.4 / FR-6.1
+enum DisputeSource {
+  USER_REPORT
+  LOW_COMPLETION
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+}
+
+/// FR-7.2
+enum DisputeResolution {
+  REFUND_LEARNER
+  PAY_TEACHER
+}
+
+/// FR-8.1 / FR-8.5
+enum AiJobStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+/// FR-3.3 / FR-3.4
+enum BarterCycleStatus {
+  PROPOSED // waiting for all three to accept
+  ACTIVE // all accepted, sessions being booked / run
+  COMPLETED // all sessions BARTER_COMPLETED → BARTER_SETTLED
+  FAILED // at least one session failed → completed ones settled as normal
+  DECLINED // someone declined the proposal
+  EXPIRED // proposal not answered in time
+}
+
+enum BarterDecision {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+/// Every reason a wallet bucket can change. Sign conventions are documented
+/// on LedgerEntry.
+enum LedgerEntryType {
+  WELCOME_BONUS // FR-1.2   available +120
+  SESSION_FREEZE // FR-2.2   available −d, frozen +d
+  SESSION_REFUND // FR-2.4   frozen −d, available +d
+  SESSION_RELEASE_DEBIT // FR-2.3   learner frozen −d
+  SESSION_RELEASE_CREDIT // FR-2.3   teacher available +x, debt −y (x+y=d, FR-3.4)
+  BARTER_SETTLEMENT_DEBIT // FR-3.4   learner available −x, debt +y (x+y=d)
+  BARTER_SETTLEMENT_CREDIT // FR-3.4   teacher available +x, debt −y
+  ADMIN_ADJUSTMENT // corrective entry; the ledger is never edited
+}
+
+// ─────────────────────────────────────────────────────────────
+// Accounts & auth (FR-1.1, FR-1.2, NFR-1)
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  /// Stored normalised (trimmed + lower-cased). DB CHECK enforces lower-case.
+  email           String    @unique @db.VarChar(254)
+  passwordHash    String    @map("password_hash") /// bcrypt (NFR-1)
+  displayName     String    @map("display_name") @db.VarChar(80)
+  bio             String?   @db.VarChar(1000)
+  avatarUrl       String?   @map("avatar_url")
+  role            Role      @default(USER)
+  /// IANA zone, e.g. "Asia/Damascus" (FR-1.4). Validated in the app layer.
+  timezone        String    @default("Asia/Damascus") @db.VarChar(64)
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  /// Denormalised rating aggregate for search sorting (FR-3.1); kept in sync with Rating.
+  ratingCount     Int       @default(0) @map("rating_count")
+  ratingSum       Int       @default(0) @map("rating_sum")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  wallet             Wallet?
+  welcomeBonus       WelcomeBonusGrant?
+  authSessions       AuthSession[]
+  verificationTokens EmailVerificationToken[]
+  skills             UserSkill[]
+  availability       AvailabilitySlot[]
+  debts              Debt[]
+
+  sessionsAsLearner  Session[]           @relation("SessionLearner")
+  sessionsAsTeacher  Session[]           @relation("SessionTeacher")
+  sessionsCancelled  Session[]           @relation("SessionCancelledBy")
+  sessionsEnded      Session[]           @relation("SessionEndedBy")
+  sessionEvents      SessionEvent[]
+  attendance         AttendanceLog[]
+  tasksChecked       AgendaTask[]
+  workspaceEdits     SessionWorkspace[]
+  ratingsGiven       Rating[]            @relation("RatingRater")
+  ratingsReceived    Rating[]            @relation("RatingRatee")
+  disputesOpened     Dispute[]           @relation("DisputeOpenedBy")
+  disputesResolved   Dispute[]           @relation("DisputeResolvedBy")
+  quizAttempts       QuizAttempt[]
+  barterInitiated    BarterCycle[]
+  barterParticipants BarterParticipant[]
+  ledgerActions      LedgerEntry[]
+
+  @@map("users")
+}
+
+/// Opaque DB-backed login session. Only the SHA-256 of the cookie token is stored.
+model AuthSession {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  tokenHash  String   @unique @map("token_hash") @db.Char(64)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  userAgent  String?  @map("user_agent") @db.VarChar(400)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+/// FR-1.1 confirmation link. Only the SHA-256 of the emailed token is stored.
+model EmailVerificationToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+/// FR-1.2: the welcome bonus is granted once per verified e-mail address — ever.
+/// Keyed by e-mail (not user) so it survives account re-creation.
+model WelcomeBonusGrant {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  email         String   @unique @db.VarChar(254)
+  userId        String   @unique @map("user_id") @db.Uuid
+  ledgerEntryId String   @unique @map("ledger_entry_id") @db.Uuid
+  grantedAt     DateTime @default(now()) @map("granted_at") @db.Timestamptz(3)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ledgerEntry LedgerEntry @relation(fields: [ledgerEntryId], references: [id], onDelete: Restrict)
+
+  @@map("welcome_bonus_grants")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Skills & availability (FR-1.3, FR-1.4, FR-7.1)
+// ─────────────────────────────────────────────────────────────
+
+model SkillCategory {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  slug      String   @unique @db.VarChar(64)
+  nameAr    String   @unique @map("name_ar") @db.VarChar(80)
+  nameEn    String?  @map("name_en") @db.VarChar(80)
+  position  Int      @default(0)
+  /// FR-7.1 "delete" = archive, so historical sessions keep their references.
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  skills Skill[]
+
+  @@map("skill_categories")
+}
+
+model Skill {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  slug       String   @unique @db.VarChar(64)
+  nameAr     String   @map("name_ar") @db.VarChar(80)
+  nameEn     String?  @map("name_en") @db.VarChar(80)
+  /// FR-7.1 soft delete.
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  category      SkillCategory       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  userSkills    UserSkill[]
+  sessions      Session[]
+  barterTeaches BarterParticipant[]
+
+  @@unique([categoryId, nameAr])
+  @@map("skills")
+}
+
+/// FR-1.3: one row per (user, skill, OFFERED|WANTED).
+model UserSkill {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  skillId   String        @map("skill_id") @db.Uuid
+  kind      SkillListKind
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, skillId, kind])
+  /// FR-3.2 / FR-3.3: "who offers / wants skill S" — the barter graph edges.
+  @@index([skillId, kind])
+  @@map("user_skills")
+}
+
+/// FR-1.4: recurring weekly slot in the owner's local wall-clock time.
+/// weekday: 0 = Sunday … 6 = Saturday. Minutes since local midnight, end exclusive.
+/// A slot never crosses midnight (split it into two). Converted to UTC instants
+/// per concrete week, so DST shifts are handled correctly.
+model AvailabilitySlot {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  weekday     Int      @db.SmallInt
+  startMinute Int      @map("start_minute") @db.SmallInt
+  endMinute   Int      @map("end_minute") @db.SmallInt
+  timezone    String   @db.VarChar(64)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, weekday])
+  @@map("availability_slots")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Wallet, ledger, debt (FR-2.x, FR-3.4, NFR-2)
+// ─────────────────────────────────────────────────────────────
+
+/// Cached balances. The source of truth for *history* is LedgerEntry; the
+/// balances here always equal the *After columns of the latest entry.
+/// Mutated only by src/server/services/wallet (row-locked, in a transaction).
+model Wallet {
+  id               String   @id @default(uuid(7)) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  availableMinutes Int      @default(0) @map("available_minutes")
+  frozenMinutes    Int      @default(0) @map("frozen_minutes")
+  debtMinutes      Int      @default(0) @map("debt_minutes")
+  /// Incremented by exactly 1 per ledger entry; LedgerEntry.walletVersion mirrors it.
+  version          Int      @default(0)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  entries LedgerEntry[]
+
+  @@map("wallets")
+}
+
+/// Append-only. One row = one change to one wallet.
+/// Deltas are signed minutes per bucket. *After = balance after this entry.
+/// Entries written by the same atomic operation share operationId.
+model LedgerEntry {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  walletId       String          @map("wallet_id") @db.Uuid
+  walletVersion  Int             @map("wallet_version")
+  type           LedgerEntryType
+  availableDelta Int             @default(0) @map("available_delta")
+  frozenDelta    Int             @default(0) @map("frozen_delta")
+  debtDelta      Int             @default(0) @map("debt_delta")
+  availableAfter Int             @map("available_after")
+  frozenAfter    Int             @map("frozen_after")
+  debtAfter      Int             @map("debt_after")
+  operationId    String          @map("operation_id") @db.Uuid
+  /// Makes retries / double-fired jobs harmless, e.g. "release:<sessionId>:credit".
+  idempotencyKey String?         @unique @map("idempotency_key") @db.VarChar(200)
+  sessionId      String?         @map("session_id") @db.Uuid
+  barterCycleId  String?         @map("barter_cycle_id") @db.Uuid
+  disputeId      String?         @map("dispute_id") @db.Uuid
+  /// Who caused it (user or admin). NULL = system job (NFR-3).
+  actorId        String?         @map("actor_id") @db.Uuid
+  memo           String?         @db.VarChar(500)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  wallet       Wallet             @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  session      Session?           @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  barterCycle  BarterCycle?       @relation(fields: [barterCycleId], references: [id], onDelete: Restrict)
+  dispute      Dispute?           @relation(fields: [disputeId], references: [id], onDelete: Restrict)
+  actor        User?              @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  welcomeGrant WelcomeBonusGrant?
+
+  @@unique([walletId, walletVersion])
+  @@index([sessionId])
+  @@index([operationId])
+  @@map("ledger_entries")
+}
+
+/// FR-3.4: debt created when a failed barter cycle is settled and the learner's
+/// available balance is short. Wallet.debtMinutes = SUM(remainingMinutes).
+/// Repaid FIFO from the next credits the user earns.
+model Debt {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  sessionId        String    @map("session_id") @db.Uuid
+  originalMinutes  Int       @map("original_minutes")
+  remainingMinutes Int       @map("remaining_minutes")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  settledAt        DateTime? @map("settled_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, sessionId])
+  @@index([userId, settledAt])
+  @@map("debts")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sessions (FR-4.x, FR-5.x, FR-6.x)
+// ─────────────────────────────────────────────────────────────
+
+model Session {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  kind            SessionKind   @default(DIRECT)
+  status          SessionStatus @default(PENDING)
+  learnerId       String        @map("learner_id") @db.Uuid
+  teacherId       String        @map("teacher_id") @db.Uuid
+  skillId         String        @map("skill_id") @db.Uuid
+  /// UTC. endAt = startAt + durationMinutes (DB CHECK).
+  startAt         DateTime      @map("start_at") @db.Timestamptz(3)
+  endAt           DateTime      @map("end_at") @db.Timestamptz(3)
+  /// FR-4.1: 30 | 60 | 90 | 120 (DB CHECK).
+  durationMinutes Int           @map("duration_minutes") @db.SmallInt
+  /// FR-4.1 short goal text — also sent to the AI (FR-4.3, FR-8.6).
+  goal            String        @db.VarChar(500)
+  /// FR-2.2: minutes frozen for this session. = duration for DIRECT, 0 for BARTER.
+  escrowMinutes   Int           @map("escrow_minutes") @db.SmallInt
+  /// FR-5.2
+  meetingUrl      String?       @map("meeting_url") @db.VarChar(500)
+
+  respondedAt          DateTime?         @map("responded_at") @db.Timestamptz(3)
+  cancelledAt          DateTime?         @map("cancelled_at") @db.Timestamptz(3)
+  cancelledById        String?           @map("cancelled_by_id") @db.Uuid
+  cancelReason         String?           @map("cancel_reason") @db.VarChar(500)
+  /// FR-5.1 / FR-4.6: first JOIN per side (cache of AttendanceLog for the no-show job).
+  teacherFirstJoinedAt DateTime?         @map("teacher_first_joined_at") @db.Timestamptz(3)
+  learnerFirstJoinedAt DateTime?         @map("learner_first_joined_at") @db.Timestamptz(3)
+  startedAt            DateTime?         @map("started_at") @db.Timestamptz(3)
+  endedAt              DateTime?         @map("ended_at") @db.Timestamptz(3)
+  endReason            SessionEndReason? @map("end_reason")
+  endedById            String?           @map("ended_by_id") @db.Uuid
+  /// FR-6.1 snapshot of % agenda tasks checked at end (0–100).
+  completionPercent    Int?              @map("completion_percent") @db.SmallInt
+  /// FR-6.4 / FR-8.4 / FR-8.5: endedAt + 48h.
+  releaseDueAt         DateTime?         @map("release_due_at") @db.Timestamptz(3)
+  /// When escrow / settlement moved money for this session.
+  settledAt            DateTime?         @map("settled_at") @db.Timestamptz(3)
+  agendaSource         AgendaSource?     @map("agenda_source")
+  agendaGeneratedAt    DateTime?         @map("agenda_generated_at") @db.Timestamptz(3)
+  barterCycleId        String?           @map("barter_cycle_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  learner     User         @relation("SessionLearner", fields: [learnerId], references: [id], onDelete: Restrict)
+  teacher     User         @relation("SessionTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
+  cancelledBy User?        @relation("SessionCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  endedBy     User?        @relation("SessionEndedBy", fields: [endedById], references: [id], onDelete: Restrict)
+  skill       Skill        @relation(fields: [skillId], references: [id], onDelete: Restrict)
+  barterCycle BarterCycle? @relation(fields: [barterCycleId], references: [id], onDelete: Restrict)
+
+  events        SessionEvent[]
+  attendance    AttendanceLog[]
+  agendaTasks   AgendaTask[]
+  workspace     SessionWorkspace?
+  rating        Rating?
+  dispute       Dispute?
+  aiSummary     AiSummary?
+  quiz          Quiz?
+  ledgerEntries LedgerEntry[]
+  debts         Debt[]
+
+  /// FR-3.4: exactly one session per teacher inside a barter cycle.
+  @@unique([barterCycleId, teacherId])
+  @@index([teacherId, status])
+  @@index([learnerId, status])
+  /// NFR-3 jobs: auto-reject / no-show scans.
+  @@index([status, startAt])
+  /// NFR-3 jobs: 48h release scans.
+  @@index([status, releaseDueAt])
+  /// FR-6.3 weekly cap lookup.
+  @@index([teacherId, learnerId, startAt])
+  @@map("sessions")
+}
+
+/// Append-only audit trail of status transitions (evidence for FR-7.2).
+model SessionEvent {
+  id         String         @id @default(uuid(7)) @db.Uuid
+  sessionId  String         @map("session_id") @db.Uuid
+  fromStatus SessionStatus? @map("from_status")
+  toStatus   SessionStatus  @map("to_status")
+  /// e.g. "FR-4.2:accept". Matches the labels in docs/SESSION_STATE_MACHINE.md.
+  trigger    String         @db.VarChar(80)
+  /// NULL = system job.
+  actorId    String?        @map("actor_id") @db.Uuid
+  note       String?        @db.VarChar(500)
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId, createdAt])
+  @@map("session_events")
+}
+
+/// FR-5.1: every room entry/exit, evidence for no-show (FR-4.6) and disputes (FR-7.2).
+model AttendanceLog {
+  id        String          @id @default(uuid(7)) @db.Uuid
+  sessionId String          @map("session_id") @db.Uuid
+  userId    String          @map("user_id") @db.Uuid
+  event     AttendanceEvent
+  at        DateTime        @default(now()) @db.Timestamptz(3)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId, userId, at])
+  @@map("attendance_logs")
+}
+
+/// FR-4.3 / FR-4.4 / FR-5.4: checkable agenda items.
+model AgendaTask {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  sessionId      String       @map("session_id") @db.Uuid
+  position       Int          @db.SmallInt
+  title          String       @db.VarChar(200)
+  details        String?      @db.VarChar(1000)
+  phase          AgendaPhase?
+  plannedMinutes Int          @map("planned_minutes") @db.SmallInt
+  isDone         Boolean      @default(false) @map("is_done")
+  doneAt         DateTime?    @map("done_at") @db.Timestamptz(3)
+  doneById       String?      @map("done_by_id") @db.Uuid
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  doneBy  User?   @relation(fields: [doneById], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, position])
+  @@map("agenda_tasks")
+}
+
+/// FR-5.3 / FR-5.5: shared notes + code editor, kept as the learning archive.
+model SessionWorkspace {
+  sessionId    String   @id @map("session_id") @db.Uuid
+  notes        String   @default("")
+  code         String   @default("")
+  codeLanguage String   @default("plaintext") @map("code_language") @db.VarChar(32)
+  /// Optimistic concurrency for concurrent edits by the two participants.
+  revision     Int      @default(0)
+  updatedById  String?  @map("updated_by_id") @db.Uuid
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  updatedBy User?   @relation(fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@map("session_workspaces")
+}
+
+/// FR-6.2: learner rates teacher once per session.
+model Rating {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  sessionId String   @unique @map("session_id") @db.Uuid
+  raterId   String   @map("rater_id") @db.Uuid
+  rateeId   String   @map("ratee_id") @db.Uuid
+  stars     Int      @db.SmallInt
+  review    String?  @db.VarChar(2000)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  rater   User    @relation("RatingRater", fields: [raterId], references: [id], onDelete: Restrict)
+  ratee   User    @relation("RatingRatee", fields: [rateeId], references: [id], onDelete: Restrict)
+
+  @@index([rateeId])
+  @@map("ratings")
+}
+
+/// FR-6.4 / FR-6.1 / FR-7.2: at most one dispute per session.
+model Dispute {
+  id           String             @id @default(uuid(7)) @db.Uuid
+  sessionId    String             @unique @map("session_id") @db.Uuid
+  source       DisputeSource
+  openedById   String?            @map("opened_by_id") @db.Uuid
+  reason       String?            @db.VarChar(2000)
+  status       DisputeStatus      @default(OPEN)
+  resolution   DisputeResolution?
+  resolvedById String?            @map("resolved_by_id") @db.Uuid
+  resolvedAt   DateTime?          @map("resolved_at") @db.Timestamptz(3)
+  adminNote    String?            @map("admin_note") @db.VarChar(2000)
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session       Session       @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  openedBy      User?         @relation("DisputeOpenedBy", fields: [openedById], references: [id], onDelete: Restrict)
+  resolvedBy    User?         @relation("DisputeResolvedBy", fields: [resolvedById], references: [id], onDelete: Restrict)
+  ledgerEntries LedgerEntry[]
+
+  @@index([status, createdAt])
+  @@map("disputes")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AI summary & quiz (FR-8.x)
+// ─────────────────────────────────────────────────────────────
+
+/// FR-8.1 / FR-8.2 / FR-8.5
+model AiSummary {
+  id           String      @id @default(uuid(7)) @db.Uuid
+  sessionId    String      @unique @map("session_id") @db.Uuid
+  status       AiJobStatus @default(PENDING)
+  summary      String?
+  /// string[]
+  keyPoints    Json?       @map("key_points")
+  /// { title: string, description: string }[]
+  exercises    Json?
+  model        String?     @db.VarChar(64)
+  errorMessage String?     @map("error_message") @db.VarChar(1000)
+  requestedAt  DateTime    @default(now()) @map("requested_at") @db.Timestamptz(3)
+  completedAt  DateTime?   @map("completed_at") @db.Timestamptz(3)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+
+  @@map("ai_summaries")
+}
+
+/// FR-8.1: 3 multiple-choice questions.
+model Quiz {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  sessionId String   @unique @map("session_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session   Session        @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  questions QuizQuestion[]
+  attempt   QuizAttempt?
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id            String  @id @default(uuid(7)) @db.Uuid
+  quizId        String  @map("quiz_id") @db.Uuid
+  position      Int     @db.SmallInt
+  prompt        String  @db.VarChar(1000)
+  /// string[] (2–6 options)
+  options       Json
+  correctOption Int     @map("correct_option") @db.SmallInt
+  explanation   String? @db.VarChar(1000)
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, position])
+  @@map("quiz_questions")
+}
+
+/// FR-8.3: single attempt (answers are revealed afterwards), kept as evidence.
+model QuizAttempt {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  quizId       String   @unique @map("quiz_id") @db.Uuid
+  learnerId    String   @map("learner_id") @db.Uuid
+  /// number[] — chosen option index per question position
+  answers      Json
+  correctCount Int      @map("correct_count") @db.SmallInt
+  totalCount   Int      @map("total_count") @db.SmallInt
+  submittedAt  DateTime @default(now()) @map("submitted_at") @db.Timestamptz(3)
+
+  quiz    Quiz @relation(fields: [quizId], references: [id], onDelete: Restrict)
+  learner User @relation(fields: [learnerId], references: [id], onDelete: Restrict)
+
+  @@map("quiz_attempts")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Barter cycles (FR-3.3, FR-3.4)
+// ─────────────────────────────────────────────────────────────
+
+/// A closed 3-cycle A → B → C → A where "X → Y" means X teaches Y.
+model BarterCycle {
+  id              String            @id @default(uuid(7)) @db.Uuid
+  status          BarterCycleStatus @default(PROPOSED)
+  /// FR-3.4: one unified duration for all three sessions.
+  durationMinutes Int               @map("duration_minutes") @db.SmallInt
+  initiatorId     String?           @map("initiator_id") @db.Uuid
+  proposedAt      DateTime          @default(now()) @map("proposed_at") @db.Timestamptz(3)
+  respondByAt     DateTime          @map("respond_by_at") @db.Timestamptz(3)
+  activatedAt     DateTime?         @map("activated_at") @db.Timestamptz(3)
+  /// Deadline for all three sessions to be booked once ACTIVE (docs/QUESTIONS.md).
+  scheduleByAt    DateTime?         @map("schedule_by_at") @db.Timestamptz(3)
+  resolvedAt      DateTime?         @map("resolved_at") @db.Timestamptz(3)
+
+  initiator     User?               @relation(fields: [initiatorId], references: [id], onDelete: Restrict)
+  participants  BarterParticipant[]
+  sessions      Session[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([status])
+  @@map("barter_cycles")
+}
+
+/// position p teaches position (p + 1) % 3, using teachesSkillId.
+model BarterParticipant {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  cycleId        String         @map("cycle_id") @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  position       Int            @db.SmallInt
+  teachesSkillId String         @map("teaches_skill_id") @db.Uuid
+  decision       BarterDecision @default(PENDING)
+  decidedAt      DateTime?      @map("decided_at") @db.Timestamptz(3)
+
+  cycle        BarterCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  teachesSkill Skill       @relation(fields: [teachesSkillId], references: [id], onDelete: Restrict)
+
+  @@unique([cycleId, userId])
+  @@unique([cycleId, position])
+  @@index([userId, decision])
+  @@map("barter_participants")
+}

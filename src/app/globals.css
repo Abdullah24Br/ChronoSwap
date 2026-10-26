@@ -1,0 +1,182 @@
+@import "tailwindcss";
+
+/* ChronoSwap design tokens — "time as currency".
+ * Dark-first. Two accents = the two sides of an exchange:
+ *   amber (#FFB547) → giving / teaching / spendable (available) time
+ *   cyan  (#3DE0FF) → receiving / learning / escrowed (frozen) time
+ * Always use the semantic utilities below (bg-surface, text-muted, text-amber-ink …),
+ * never raw hex values or Tailwind's default palette, in components.
+ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --cs-canvas: #07070a;
+  --cs-surface: #0d0d12;
+  --cs-raised: #14141b;
+  --cs-overlay: #1b1b24;
+  --cs-line: rgb(242 240 235 / 0.08);
+  --cs-line-strong: rgb(242 240 235 / 0.16);
+  --cs-fg: #f2f0eb;
+  --cs-muted: #a8a59e;
+  --cs-subtle: #6f6d68;
+
+  --cs-amber: #ffb547;
+  --cs-amber-ink: #ffb547;
+  --cs-amber-soft: rgb(255 181 71 / 0.12);
+  --cs-cyan: #3de0ff;
+  --cs-cyan-ink: #3de0ff;
+  --cs-cyan-soft: rgb(61 224 255 / 0.11);
+  --cs-success: #5ad19a;
+  --cs-success-soft: rgb(90 209 154 / 0.12);
+  --cs-danger: #ff6b6b;
+  --cs-danger-soft: rgb(255 107 107 / 0.12);
+
+  --cs-glow-amber: rgb(255 181 71 / 0.10);
+  --cs-glow-cyan: rgb(61 224 255 / 0.07);
+  --cs-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px -12px rgb(0 0 0 / 0.6);
+  --cs-grain-opacity: 0.035;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --cs-canvas: #f2f0eb;
+  --cs-surface: #faf9f6;
+  --cs-raised: #ffffff;
+  --cs-overlay: #ffffff;
+  --cs-line: rgb(7 7 10 / 0.09);
+  --cs-line-strong: rgb(7 7 10 / 0.18);
+  --cs-fg: #0b0b0f;
+  --cs-muted: #57554f;
+  --cs-subtle: #8a877f;
+
+  --cs-amber: #ffb547;
+  --cs-amber-ink: #9a5800; /* amber as text needs more contrast on light */
+  --cs-amber-soft: rgb(255 181 71 / 0.2);
+  --cs-cyan: #3de0ff;
+  --cs-cyan-ink: #00728a;
+  --cs-cyan-soft: rgb(61 224 255 / 0.18);
+  --cs-success: #1d8a5a;
+  --cs-success-soft: rgb(29 138 90 / 0.12);
+  --cs-danger: #c93636;
+  --cs-danger-soft: rgb(201 54 54 / 0.1);
+
+  --cs-glow-amber: rgb(255 181 71 / 0.18);
+  --cs-glow-cyan: rgb(61 224 255 / 0.14);
+  --cs-shadow: 0 1px 2px rgb(7 7 10 / 0.04), 0 12px 32px -16px rgb(7 7 10 / 0.18);
+  --cs-grain-opacity: 0.025;
+}
+
+@theme inline {
+  --color-canvas: var(--cs-canvas);
+  --color-surface: var(--cs-surface);
+  --color-raised: var(--cs-raised);
+  --color-overlay: var(--cs-overlay);
+  --color-line: var(--cs-line);
+  --color-line-strong: var(--cs-line-strong);
+  --color-fg: var(--cs-fg);
+  --color-muted: var(--cs-muted);
+  --color-subtle: var(--cs-subtle);
+
+  --color-amber: var(--cs-amber);
+  --color-amber-ink: var(--cs-amber-ink);
+  --color-amber-soft: var(--cs-amber-soft);
+  --color-on-amber: #1a1206;
+  --color-cyan: var(--cs-cyan);
+  --color-cyan-ink: var(--cs-cyan-ink);
+  --color-cyan-soft: var(--cs-cyan-soft);
+  --color-on-cyan: #031a20;
+  --color-success: var(--cs-success);
+  --color-success-soft: var(--cs-success-soft);
+  --color-danger: var(--cs-danger);
+  --color-danger-soft: var(--cs-danger-soft);
+
+  --font-display: var(--font-alexandria), var(--font-plex-arabic), system-ui, sans-serif;
+  --font-sans: var(--font-plex-arabic), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --shadow-card: var(--cs-shadow);
+  --radius-card: 1.125rem;
+
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-toast-in: toast-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-dialog-in: dialog-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@layer base {
+  html {
+    background: var(--cs-canvas);
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--cs-canvas);
+    color: var(--cs-fg);
+    font-family: var(--font-sans);
+    line-height: 1.75; /* Arabic needs more leading than Latin */
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    line-height: 1.35;
+    letter-spacing: 0; /* never letter-space Arabic: it breaks joined letters */
+  }
+  ::selection {
+    background: var(--cs-amber);
+    color: #1a1206;
+  }
+  :focus-visible {
+    outline: 2px solid var(--cs-cyan);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Ambient "two sides of time" glow + fine grain behind the app. */
+.cs-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 100% -10%, var(--cs-glow-amber), transparent 60%),
+    radial-gradient(50rem 36rem at 0% 110%, var(--cs-glow-cyan), transparent 60%);
+}
+.cs-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: var(--cs-grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Precise numerals for balances and times. */
+.cs-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+dialog.cs-dialog::backdrop {
+  background: rgb(4 4 6 / 0.6);
+  backdrop-filter: blur(4px);
+}
