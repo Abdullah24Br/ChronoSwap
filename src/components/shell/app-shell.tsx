@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { ButtonLink } from "@/components/ui/button";
+import { Suspense, type ReactNode } from "react";
+import { AuthNav, AuthNavSkeleton } from "./auth-nav";
 import { Logo } from "./logo";
 import { DesktopNav, MobileNav } from "./navigation";
 import { ThemeToggle } from "./theme";
@@ -25,12 +25,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <ButtonLink href="/login" variant="outline" size="md" className="hidden sm:inline-flex">
-              تسجيل الدخول
-            </ButtonLink>
-            <ButtonLink href="/register" size="md">
-              ابدأ مجاناً
-            </ButtonLink>
+            <Suspense fallback={<AuthNavSkeleton />}>
+              <AuthNav />
+            </Suspense>
           </div>
         </div>
       </header>

@@ -27,6 +27,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+export const instant = false;
+
 // NFR-4: Arabic, right-to-left, responsive.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

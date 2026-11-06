@@ -44,3 +44,6 @@ next-env.d.ts
 # ChronoSwap
 /src/generated/prisma
 /.data
+
+# scratch exports
+/ChronoSwap_SRS_IEEE_v4_extracted.txt

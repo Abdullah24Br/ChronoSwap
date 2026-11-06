@@ -1,6 +1,10 @@
 // Every numeric rule from the SRS in one place (safe to import on client and server).
 // All time amounts are INTEGER MINUTES.
 
+/** FR-1.1: email verification link valid for 24 hours. */
+export const EMAIL_VERIFICATION_TTL_HOURS = 24;
+export const EMAIL_VERIFICATION_TTL_MS = EMAIL_VERIFICATION_TTL_HOURS * 60 * 60 * 1000;
+
 /** FR-1.2 */
 export const WELCOME_BONUS_MINUTES = 120;
 

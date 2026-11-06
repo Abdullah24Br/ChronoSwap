@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { formatDateTime, formatMinutes, formatTimeAmount, hoursToMinutes, isValidTimeZone } from "./time";
+import {
+  formatDateTime,
+  formatMinutes,
+  formatTimeAmount,
+  hasOverlappingSlots,
+  hoursToMinutes,
+  isValidTimeZone,
+  minutesToTimeString,
+  timeStringToMinutes,
+} from "./time";
 
 describe("formatTimeAmount", () => {
   it.each([
@@ -53,5 +62,40 @@ describe("time zones", () => {
     const opts = { hour: "2-digit", minute: "2-digit", hourCycle: "h23" } as const;
     expect(formatDateTime(instant, "Asia/Damascus", opts)).toContain("15:00");
     expect(formatDateTime(instant, "Europe/Berlin", opts)).toContain("14:00"); // CEST after DST switch
+  });
+});
+
+describe("availability time helpers (FR-1.4)", () => {
+  it("converts minutes to time string and back", () => {
+    expect(minutesToTimeString(540)).toBe("09:00");
+    expect(minutesToTimeString(810)).toBe("13:30");
+    expect(timeStringToMinutes("09:00")).toBe(540);
+    expect(timeStringToMinutes("13:30")).toBe(810);
+  });
+
+  it("detects overlapping slots correctly", () => {
+    // Non-overlapping slots on different days
+    expect(
+      hasOverlappingSlots([
+        { weekday: 0, startMinute: 540, endMinute: 660 },
+        { weekday: 1, startMinute: 540, endMinute: 660 },
+      ]),
+    ).toBe(false);
+
+    // Non-overlapping slots on same day
+    expect(
+      hasOverlappingSlots([
+        { weekday: 0, startMinute: 540, endMinute: 660 }, // 09:00 - 11:00
+        { weekday: 0, startMinute: 660, endMinute: 780 }, // 11:00 - 13:00 (adjacent is allowed)
+      ]),
+    ).toBe(false);
+
+    // Overlapping slots on same day
+    expect(
+      hasOverlappingSlots([
+        { weekday: 0, startMinute: 540, endMinute: 700 }, // 09:00 - 11:40
+        { weekday: 0, startMinute: 660, endMinute: 780 }, // 11:00 - 13:00
+      ]),
+    ).toBe(true);
   });
 });

@@ -28,6 +28,30 @@ export class NotFoundError extends DomainError {
   }
 }
 
+export class EmailAlreadyExistsError extends DomainError {
+  constructor(message = "البريد الإلكتروني مسجل مسبقاً") {
+    super("EMAIL_EXISTS", message);
+  }
+}
+
+export class InvalidCredentialsError extends DomainError {
+  constructor(message = "بيانات الدخول غير صحيحة") {
+    super("INVALID_CREDENTIALS", message);
+  }
+}
+
+export class EmailNotVerifiedError extends DomainError {
+  constructor(message = "يرجى تأكيد بريدك الإلكتروني أولاً قبل تسجيل الدخول") {
+    super("EMAIL_NOT_VERIFIED", message);
+  }
+}
+
+export class InvalidTokenError extends DomainError {
+  constructor(message = "رابط التفعيل غير صالح أو منتهي الصلاحية") {
+    super("INVALID_TOKEN", message);
+  }
+}
+
 export class InvalidTransitionError extends DomainError {
   constructor(from: string, to: string) {
     super("INVALID_TRANSITION", `Session cannot move from ${from} to ${to}`);

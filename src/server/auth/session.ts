@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { db } from "@/server/db";
 import { generateToken, hashToken } from "./tokens";
 
@@ -35,6 +36,7 @@ export async function createAuthSession(userId: string, userAgent?: string): Pro
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
+  await connection();
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   if (!token) return null;
   const session = await db.authSession.findUnique({
