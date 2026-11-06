@@ -31,12 +31,14 @@ export async function AuthNav() {
       )}
       <Link
         href="/profile"
-        className="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm transition-colors hover:border-line-strong hover:bg-raised"
+        aria-label={`الملف الشخصي: ${user.displayName}`}
+        className="flex items-center gap-2 rounded-lg border border-line bg-surface p-1.5 text-sm transition-colors hover:border-line-strong hover:bg-raised sm:px-3"
       >
         <span className="flex size-7 items-center justify-center rounded-full bg-amber-soft text-amber-ink font-semibold text-xs">
           {user.displayName.slice(0, 1)}
         </span>
-        <span className="font-medium text-fg max-w-[120px] truncate">{user.displayName}</span>
+        {/* NFR-4: on phones the avatar alone keeps the top bar inside 390px */}
+        <span className="hidden max-w-[120px] truncate font-medium text-fg sm:inline">{user.displayName}</span>
         {user.role === "ADMIN" && (
           <Badge tone="amber" className="gap-1 px-1.5 py-0 text-xs">
             <ShieldCheck className="size-3" />
@@ -51,9 +53,10 @@ export async function AuthNav() {
 
 export function AuthNavSkeleton() {
   return (
+    // NFR-4: same footprint as the signed-in bar on phones, so nothing overflows while loading.
     <div className="flex items-center gap-2">
-      <div className="h-10 w-24 animate-pulse rounded-lg bg-surface" />
-      <div className="h-10 w-24 animate-pulse rounded-lg bg-surface" />
+      <div className="size-10 animate-pulse rounded-lg bg-surface sm:h-10 sm:w-24" />
+      <div className="size-10 animate-pulse rounded-lg bg-surface sm:h-10 sm:w-24" />
     </div>
   );
 }

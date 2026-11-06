@@ -42,6 +42,8 @@ interface SessionBookingFormProps {
   isBarter?: boolean;
   barterCycleId?: string;
   defaultSkillId?: string;
+  /** FR-3.4: barter sessions use the cycle's agreed duration and skill. */
+  lockedDurationMinutes?: 30 | 60 | 90 | 120;
 }
 
 export function SessionBookingForm({
@@ -51,6 +53,7 @@ export function SessionBookingForm({
   isBarter = false,
   barterCycleId,
   defaultSkillId,
+  lockedDurationMinutes,
 }: SessionBookingFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -58,7 +61,9 @@ export function SessionBookingForm({
   const [skillId, setSkillId] = useState(
     defaultSkillId ?? teacher.offeredSkills[0]?.id ?? "",
   );
-  const [durationMinutes, setDurationMinutes] = useState<30 | 60 | 90 | 120>(60);
+  const [durationMinutes, setDurationMinutes] = useState<30 | 60 | 90 | 120>(
+    lockedDurationMinutes ?? 60,
+  );
   const [startAtString, setStartAtString] = useState("");
   const [goal, setGoal] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +115,7 @@ export function SessionBookingForm({
 
       setSuccess(true);
       setTimeout(() => {
-        router.push("/explore");
+        router.push(isBarter ? "/barter" : "/sessions");
         router.refresh();
       }, 2000);
     });
@@ -194,6 +199,7 @@ export function SessionBookingForm({
               id="skill-select"
               value={skillId}
               onChange={(e) => setSkillId(e.target.value)}
+              disabled={isBarter}
               className="w-full rounded-lg border border-line bg-canvas px-3.5 py-2.5 text-sm text-fg transition-colors hover:border-line-strong focus:border-amber focus:outline-none"
               required
             >
@@ -216,10 +222,11 @@ export function SessionBookingForm({
                   key={d}
                   type="button"
                   onClick={() => setDurationMinutes(d)}
+                  disabled={lockedDurationMinutes !== undefined && d !== lockedDurationMinutes}
                   className={`rounded-lg border py-2.5 text-center text-sm font-semibold transition-all cursor-pointer ${
                     durationMinutes === d
                       ? "border-amber bg-amber-soft text-amber-ink ring-2 ring-amber/20"
-                      : "border-line bg-canvas text-muted hover:border-line-strong hover:text-fg"
+                      : "border-line bg-canvas text-muted hover:border-line-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
                   }`}
                 >
                   <span className="block font-mono">{d}</span>
@@ -313,11 +320,11 @@ export function SessionBookingForm({
             <Wallet className="size-4 text-amber-ink" />
             <div className="text-xs">
               <span className="font-semibold text-fg block">
-                {isBarter ? "مقايضة مباشرة (بدون حسم رصيد)" : "تجميد الضمان (Escrow Freeze)"}
+                {isBarter ? "جلسة ضمن حلقة مقايضة (دون تجميد رصيد)" : "تجميد الضمان (Escrow Freeze)"}
               </span>
               <span className="text-subtle">
                 {isBarter
-                  ? "ساعات تبادل متكافئة بين الطرفين دون تجميد رصيد"
+                  ? "كل طرف في الحلقة يعطي من الساعات بقدر ما يأخذ (FR-3.4)"
                   : `سيتم تجميد ${durationMinutes} دقيقة حتى انتهاء الجلسة وتقييمها بنجاح`}
               </span>
             </div>

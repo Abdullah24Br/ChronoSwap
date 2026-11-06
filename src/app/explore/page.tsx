@@ -49,7 +49,7 @@ export default async function ExplorePage(props: ExplorePageProps) {
             <span>استكشاف المهارات والمقايضة الذكية (FR-3.1 / FR-3.2)</span>
           </h1>
           <p className="text-sm text-muted mt-1">
-            ابحث عن مدرّسين لمختلف المهارات، أو اكتشف فرص المقايضة المباشرة المتكافئة دون استهلاك رصيدك.
+            ابحث عن مدرّسين لمختلف المهارات، أو اكتشف من يعرض ما تطلبه ويطلب ما تعرضه.
           </p>
         </div>
       </div>

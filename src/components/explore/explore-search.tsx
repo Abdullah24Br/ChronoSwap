@@ -142,7 +142,7 @@ export function ExploreSearch({
                 <span>فرص التطابق المباشر (Direct Barter Matches)</span>
               </h3>
               <p className="text-sm text-muted">
-                هؤلاء المستخدمون يعرضون مهارات تطلبها، ويطلبون مهارات تعرضها! التبادل معهم متكافئ ومباشر (دون الحاجة لرصيد مسبق).
+                هؤلاء المستخدمون يعرضون مهارات تطلبها، ويطلبون مهارات تعرضها، فيمكنكما تبادل التعليم: كل ساعة تعلّمها لأحدهم تعود إليك لتتعلّم بها منه. للتبادل دون رصيد مسبق جرّب الحلقات الثلاثية في صفحة المقايضة.
               </p>
             </div>
             <ButtonLink href="/profile" variant="outline" size="sm" icon={<GraduationCap className="size-4" />}>
@@ -433,15 +433,15 @@ function DirectMatchCard({ match }: { match: DirectBarterMatch }) {
       {/* Action Footer */}
       <div className="bg-raised/40 px-5 py-3 border-t border-line flex items-center justify-between">
         <span className="text-xs text-subtle font-medium">
-          مقايضة متكافئة: <strong className="text-cyan-ink">0 دقيقة من الرصيد</strong>
+          حجز عادي: تُجمَّد مدة الجلسة من رصيدك حتى إتمامها
         </span>
         <ButtonLink
-          href={`/sessions/new?teacherId=${partner.id}&barter=true`}
+          href={`/sessions/new?teacherId=${partner.id}${theyTeachYou[0] ? `&skillId=${theyTeachYou[0].id}` : ""}`}
           size="sm"
           variant="primary"
           icon={<ArrowLeftRight className="size-3.5" />}
         >
-          طلب مقايضة
+          احجز جلسة معه
         </ButtonLink>
       </div>
     </Card>

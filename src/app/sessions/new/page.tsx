@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { db } from "@/server/db";
+import { getBarterBookingContext } from "@/server/services/barter/barter-overview";
 import { getCurrentUser } from "@/server/auth/session";
 import { SessionBookingForm } from "@/components/sessions/session-booking-form";
 import { ArrowLeft, Clock } from "lucide-react";
@@ -24,13 +25,21 @@ export default async function NewSessionPage({ searchParams }: NewSessionPagePro
 
   const params = await searchParams;
   const teacherId = params.teacherId;
-  const isBarter = params.barter === "true" || !!params.cycleId;
-  const barterCycleId = params.cycleId;
-  const defaultSkillId = params.skillId;
-
   if (!teacherId || teacherId === user.id) {
     redirect("/explore");
   }
+
+  // FR-3.4: a barter booking is only one leg of an ACTIVE cycle where this user learns from this
+  // teacher; its skill and duration are fixed by the cycle. Anything else is a normal booking.
+  const barter = params.cycleId
+    ? await getBarterBookingContext(user.id, params.cycleId, teacherId)
+    : null;
+  if (params.cycleId && !barter) {
+    redirect("/barter");
+  }
+  const isBarter = barter !== null;
+  const barterCycleId = barter?.cycleId;
+  const defaultSkillId = barter?.skillId ?? params.skillId;
 
   // Fetch teacher details
   const teacher = await db.user.findUnique({
@@ -107,6 +116,7 @@ export default async function NewSessionPage({ searchParams }: NewSessionPagePro
         isBarter={isBarter}
         barterCycleId={barterCycleId}
         defaultSkillId={defaultSkillId}
+        lockedDurationMinutes={barter?.durationMinutes}
       />
     </div>
   );
