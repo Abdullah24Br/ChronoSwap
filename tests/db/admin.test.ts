@@ -226,8 +226,8 @@ describe("Admin Panel & Platform Governance (Module 7: FR-7.1, FR-7.2, FR-7.3)",
     });
 
     await acceptSessionRequest(fixture.teacher.id, { sessionId: session.id });
-    await recordSessionAttendance(fixture.teacher.id, session.id, "JOIN");
-    await recordSessionAttendance(fixture.nonAdmin.id, session.id, "JOIN");
+    await recordSessionAttendance(fixture.teacher.id, session.id, "JOIN", db, startAt);
+    await recordSessionAttendance(fixture.nonAdmin.id, session.id, "JOIN", db, startAt);
 
     // End session
     await db.session.update({

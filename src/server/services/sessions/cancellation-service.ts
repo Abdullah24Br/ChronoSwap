@@ -277,6 +277,12 @@ export interface RecordAttendanceResult {
  * FR-5.1 / FR-4.6: Records participant entry/exit in the interactive session room.
  * When both teacher and learner join an ACCEPTED session, transitions status to IN_PROGRESS.
  */
+/** Q-8: whether a room entry at `at` counts as attendance for a session starting at `startAt`. */
+export function isInAttendanceWindow(startAt: Date, at: Date): boolean {
+  const graceMs = NO_SHOW_GRACE_MINUTES * 60 * 1000;
+  return at.getTime() >= startAt.getTime() - graceMs && at.getTime() <= startAt.getTime() + graceMs;
+}
+
 export async function recordSessionAttendance(
   userId: string,
   sessionId: string,
@@ -310,7 +316,9 @@ export async function recordSessionAttendance(
       },
     });
 
-    if (event !== "JOIN") {
+    // Q-8: the room is open from acceptance, but a JOIN counts as attendance (no-show detection,
+    // IN_PROGRESS) only inside [start - 15 min, start + 15 min]. Every entry is still logged.
+    if (event !== "JOIN" || !isInAttendanceWindow(session.startAt, now)) {
       return {
         sessionId,
         userId,
@@ -436,13 +444,18 @@ export async function processNoShowSessions(
           currentSession.startAt.getTime() + NO_SHOW_GRACE_MINUTES * 60 * 1000,
         );
 
-        // Check attendance logs or cached timestamps
+        // Q-8: only JOINs inside [start - 15 min, start + 15 min] count as attendance.
+        const windowStart = new Date(
+          currentSession.startAt.getTime() - NO_SHOW_GRACE_MINUTES * 60 * 1000,
+        );
+        const inWindow = { gte: windowStart, lte: graceLimit };
+
         const teacherLog = await tx.attendanceLog.findFirst({
           where: {
             sessionId: currentSession.id,
             userId: currentSession.teacherId,
             event: "JOIN",
-            at: { lte: graceLimit },
+            at: inWindow,
           },
         });
 
@@ -451,19 +464,12 @@ export async function processNoShowSessions(
             sessionId: currentSession.id,
             userId: currentSession.learnerId,
             event: "JOIN",
-            at: { lte: graceLimit },
+            at: inWindow,
           },
         });
 
-        const teacherJoined =
-          Boolean(teacherLog) ||
-          (Boolean(currentSession.teacherFirstJoinedAt) &&
-            currentSession.teacherFirstJoinedAt! <= graceLimit);
-
-        const learnerJoined =
-          Boolean(learnerLog) ||
-          (Boolean(currentSession.learnerFirstJoinedAt) &&
-            currentSession.learnerFirstJoinedAt! <= graceLimit);
+        const teacherJoined = Boolean(teacherLog);
+        const learnerJoined = Boolean(learnerLog);
 
         if (teacherJoined && learnerJoined) {
           // Concurrency edge case: both joined, transition to IN_PROGRESS

@@ -764,8 +764,10 @@ export async function rejectSessionRequest(
  * - For DIRECT sessions: Refunds escrow to learner (FR-2.4).
  * - Logs SessionEvent trigger 'FR-4.2:no-response'.
  */
-export async function autoRejectExpiredRequests(client: PrismaClient = db) {
-  const now = new Date();
+export async function autoRejectExpiredRequests(
+  client: PrismaClient = db,
+  now: Date = new Date(),
+) {
   const expiredSessions = await client.session.findMany({
     where: {
       status: "PENDING",

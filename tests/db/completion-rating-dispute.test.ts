@@ -122,8 +122,8 @@ describe("Completion, Rating & Dispute System (Module 6: FR-6.1, FR-6.2, FR-6.4)
     });
 
     // Both join to become IN_PROGRESS
-    await recordSessionAttendance(fixture.teacher.id, session.id, "JOIN");
-    await recordSessionAttendance(fixture.learner.id, session.id, "JOIN");
+    await recordSessionAttendance(fixture.teacher.id, session.id, "JOIN", db, startAt);
+    await recordSessionAttendance(fixture.learner.id, session.id, "JOIN", db, startAt);
 
     return session;
   }

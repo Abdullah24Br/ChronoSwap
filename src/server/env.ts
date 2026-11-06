@@ -11,6 +11,10 @@ const EnvSchema = z.object({
   /** FR-4.3 / FR-8.1 — used from the AI phase onwards. */
   GEMINI_API_KEY: z.string().optional().default(""),
   GEMINI_MODEL: z.string().optional().default(""),
+  /** NFR-3: seconds between in-process job ticks (src/instrumentation.ts). 0 disables them. */
+  JOBS_INTERVAL_SECONDS: z.coerce.number().int().min(0).default(60),
+  /** NFR-3: bearer token for POST /api/jobs/run (external cron). Empty disables the route. */
+  CRON_SECRET: z.string().optional().default(""),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

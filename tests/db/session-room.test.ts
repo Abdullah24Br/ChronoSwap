@@ -146,8 +146,12 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     const { learner, teacher, session } = await createRoomTestFixture();
     await acceptSessionRequest(teacher.id, { sessionId: session.id });
 
-    // Teacher enters room first
-    const teacherView = await getSessionRoomData(session.id, teacher.id);
+    // Q-8: entering a day early opens the room but is not attendance yet.
+    const earlyView = await getSessionRoomData(session.id, learner.id);
+    expect(earlyView.status).toBe("ACCEPTED");
+
+    // Teacher enters room first, at the start time
+    const teacherView = await getSessionRoomData(session.id, teacher.id, db, session.startAt);
     expect(teacherView.status).toBe("ACCEPTED");
 
     const teacherLog = await db.attendanceLog.findFirst({
@@ -156,7 +160,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     expect(teacherLog).toBeDefined();
 
     // Learner enters room second -> triggers transition to IN_PROGRESS
-    const learnerView = await getSessionRoomData(session.id, learner.id);
+    const learnerView = await getSessionRoomData(session.id, learner.id, db, session.startAt);
     expect(learnerView.status).toBe("IN_PROGRESS");
     expect(learnerView.startedAt).toBeDefined();
 

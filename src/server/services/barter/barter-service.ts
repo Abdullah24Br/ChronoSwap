@@ -1,5 +1,11 @@
 import type { PrismaClient } from "@/generated/prisma/client";
-import { SESSION_DURATIONS, type SessionDuration } from "@/lib/rules";
+import type { SessionStatus } from "@/generated/prisma/enums";
+import {
+  BARTER_PROPOSAL_TTL_MINUTES,
+  BARTER_SCHEDULE_WINDOW_MINUTES,
+  SESSION_DURATIONS,
+  type SessionDuration,
+} from "@/lib/rules";
 import { db } from "@/server/db";
 import { DomainError } from "@/server/errors";
 import {
@@ -559,7 +565,7 @@ export async function proposeBarterCycle(
 
   // 5. Create BarterCycle and BarterParticipants
   const now = new Date();
-  const respondByAt = new Date(now.getTime() + 72 * 60 * 60 * 1000); // 72h per Q-18
+  const respondByAt = new Date(now.getTime() + BARTER_PROPOSAL_TTL_MINUTES * 60_000); // Q-18
 
   const cycle = await client.barterCycle.create({
     data: {
@@ -688,7 +694,7 @@ export async function respondToBarterProposal(
     const allOthersAccepted = otherParticipants.every((p) => p.decision === "ACCEPTED");
 
     if (allOthersAccepted) {
-      const scheduleByAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days per Q-18
+      const scheduleByAt = new Date(now.getTime() + BARTER_SCHEDULE_WINDOW_MINUTES * 60_000); // Q-18
       const updatedCycle = await tx.barterCycle.update({
         where: { id: cycle.id },
         data: {
@@ -760,11 +766,12 @@ export async function settleFailedBarterCycleSession(
   const debitKey = `barter-settle:${session.id}:debit`;
   const creditKey = `barter-settle:${session.id}:credit`;
 
-  // Idempotency check: already settled
-  if (session.settledAt !== null) {
-    const existingDebit = await tx.ledgerEntry.findUnique({
-      where: { idempotencyKey: debitKey },
-    });
+  // Idempotency check: already settled. Keyed on the ledger rows, not on `settledAt`, because the
+  // no-show path (FR-4.6 / Q-17) stamps `settledAt` in the same transaction just before calling us.
+  const existingDebit = await tx.ledgerEntry.findUnique({
+    where: { idempotencyKey: debitKey },
+  });
+  if (existingDebit) {
     const existingCredit = await tx.ledgerEntry.findUnique({
       where: { idempotencyKey: creditKey },
     });
@@ -867,34 +874,39 @@ export async function settleFailedBarterCycleSession(
   const { applied, entries } = await postLedgerEntries(tx, postings);
 
   const now = new Date();
-  const updatedSession = await tx.session.update({
-    where: { id: session.id },
-    data: {
-      status: "RELEASED",
-      settledAt: now,
-    },
-  });
 
-  await tx.sessionEvent.create({
-    data: {
-      sessionId: session.id,
-      fromStatus: session.status,
-      toStatus: "RELEASED",
-      trigger: "FR-3.4:cycle-failed",
-      actorId: opts.actorId,
-      note: "تسوية جلسة المقايضة المكتملة بعد تعثر حلقة المقايضة",
-    },
-  });
+  // Only BARTER_COMPLETED → RELEASED is a status change (state machine). A learner no-show
+  // (NO_SHOW_LEARNER, Q-17) keeps its own status; we only settle the hours for it.
+  if (session.status === "BARTER_COMPLETED") {
+    const moved = await tx.session.updateMany({
+      where: { id: session.id, status: "BARTER_COMPLETED" },
+      data: { status: "RELEASED", settledAt: now },
+    });
+    if (moved.count !== 1) {
+      throw new DomainError("CONFLICT", "تغيرت حالة الجلسة مسبقاً");
+    }
 
-  if (session.barterCycle && session.barterCycle.status !== "FAILED") {
-    await tx.barterCycle.update({
-      where: { id: session.barterCycleId },
+    await tx.sessionEvent.create({
       data: {
-        status: "FAILED",
-        resolvedAt: now,
+        sessionId: session.id,
+        fromStatus: "BARTER_COMPLETED",
+        toStatus: "RELEASED",
+        trigger: "FR-3.4:cycle-failed",
+        actorId: opts.actorId,
+        note: "تسوية جلسة المقايضة المكتملة بعد تعثر حلقة المقايضة",
       },
     });
+  } else if (session.settledAt === null) {
+    await tx.session.update({ where: { id: session.id }, data: { settledAt: now } });
   }
+
+  // FR-3.4: a settled-as-normal session means the cycle failed.
+  await tx.barterCycle.updateMany({
+    where: { id: session.barterCycleId, status: { in: ["ACTIVE", "PROPOSED"] } },
+    data: { status: "FAILED", resolvedAt: now },
+  });
+
+  const updatedSession = await tx.session.findUniqueOrThrow({ where: { id: session.id } });
 
   return {
     applied,
@@ -917,14 +929,34 @@ export async function settleFailedBarterCycleSessionTx(
   );
 }
 
+/** Barter session statuses that mean the session failed for its cycle (FR-3.4, Q-17). */
+const FAILED_BARTER_SESSION_STATUSES = new Set<SessionStatus>([
+  "NO_SHOW_TEACHER",
+  "NO_SHOW_LEARNER",
+  "NO_SHOW_BOTH",
+  "RESOLVED_REFUNDED",
+  "RELEASED",
+]);
+
+/** Statuses that free the pair to book again (the request never turned into a session). */
+const VOID_BARTER_SESSION_STATUSES = new Set<SessionStatus>([
+  "REJECTED",
+  "AUTO_REJECTED",
+  "CANCELLED",
+]);
+
+const pairKey = (teacherId: string, learnerId: string) => `${teacherId}>${learnerId}`;
+
 /**
- * FR-3.4: Marks a barter cycle as fully completed when all 3 sessions have completed.
- * All 3 sessions transition from BARTER_COMPLETED to BARTER_SETTLED with no ledger movements
- * (because equal time was exchanged, each gave and received identical hours).
+ * FR-3.4: Marks a barter cycle as fully completed when its three sessions (A→B, B→C, C→A)
+ * have all reached BARTER_COMPLETED. They move to BARTER_SETTLED with no ledger movements
+ * (each participant gave and received the same hours). Rejected or cancelled requests that
+ * were re-booked inside the cycle are ignored.
  */
 export async function completeSuccessfulBarterCycle(
   client: PrismaClient,
   cycleId: string,
+  now: Date = new Date(),
 ) {
   return client.$transaction(async (tx) => {
     const cycle = await tx.barterCycle.findUnique({
@@ -940,25 +972,36 @@ export async function completeSuccessfulBarterCycle(
       throw new DomainError("INVALID_CYCLE_STATUS", "دورة المقايضة ليست في حالة نشطة");
     }
 
-    if (
-      cycle.sessions.length !== 3 ||
-      cycle.sessions.some((s) => s.status !== "BARTER_COMPLETED")
-    ) {
+    const completed = cycle.sessions.filter((s) => s.status === "BARTER_COMPLETED");
+    const completedPairs = new Set(completed.map((s) => pairKey(s.teacherId, s.learnerId)));
+    const blocking = cycle.sessions.some(
+      (s) => s.status !== "BARTER_COMPLETED" && !VOID_BARTER_SESSION_STATUSES.has(s.status),
+    );
+
+    if (completed.length !== 3 || completedPairs.size !== 3 || blocking) {
       throw new DomainError(
         "CYCLE_NOT_COMPLETED",
         "لا يمكن إتمام الحلقة إلا بعد اكتمال جميع الجلسات الثلاث (BARTER_COMPLETED)",
       );
     }
 
-    const now = new Date();
-    for (const s of cycle.sessions) {
-      await tx.session.update({
-        where: { id: s.id },
-        data: {
-          status: "BARTER_SETTLED",
-          settledAt: now,
-        },
+    // Compare-and-set on the cycle so two concurrent jobs cannot both settle it (NFR-3).
+    const claimed = await tx.barterCycle.updateMany({
+      where: { id: cycle.id, status: "ACTIVE" },
+      data: { status: "COMPLETED", resolvedAt: now },
+    });
+    if (claimed.count !== 1) {
+      throw new DomainError("CONFLICT", "تغيرت حالة دورة المقايضة مسبقاً");
+    }
+
+    for (const s of completed) {
+      const moved = await tx.session.updateMany({
+        where: { id: s.id, status: "BARTER_COMPLETED" },
+        data: { status: "BARTER_SETTLED", settledAt: now },
       });
+      if (moved.count !== 1) {
+        throw new DomainError("CONFLICT", "تغيرت حالة الجلسة مسبقاً");
+      }
 
       await tx.sessionEvent.create({
         data: {
@@ -971,12 +1014,8 @@ export async function completeSuccessfulBarterCycle(
       });
     }
 
-    const updatedCycle = await tx.barterCycle.update({
+    return tx.barterCycle.findUniqueOrThrow({
       where: { id: cycle.id },
-      data: {
-        status: "COMPLETED",
-        resolvedAt: now,
-      },
       include: {
         sessions: true,
         participants: {
@@ -987,9 +1026,116 @@ export async function completeSuccessfulBarterCycle(
         },
       },
     });
-
-    return updatedCycle;
   });
+}
+
+export interface ReconcileBarterCyclesResult {
+  expiredCount: number;
+  failedCount: number;
+  completedCount: number;
+  settledSessionCount: number;
+}
+
+/**
+ * FR-3.4 / Q-18 / Q-19 / NFR-3: Time-based upkeep of barter cycles. Idempotent and safe to run
+ * concurrently (every change is a compare-and-set or an idempotent ledger posting).
+ * 1. PROPOSED past `respondByAt` → EXPIRED.
+ * 2. ACTIVE with a failed session, or past `scheduleByAt` with a pair that never booked → FAILED.
+ * 3. ACTIVE with all three sessions BARTER_COMPLETED → COMPLETED (sessions BARTER_SETTLED).
+ * 4. FAILED: every BARTER_COMPLETED session is settled as a normal session (learner pays teacher,
+ *    shortfall → debt). Sessions still running are settled when they reach BARTER_COMPLETED.
+ */
+export async function reconcileBarterCycles(
+  client: PrismaClient = db,
+  now: Date = new Date(),
+): Promise<ReconcileBarterCyclesResult> {
+  const result: ReconcileBarterCyclesResult = {
+    expiredCount: 0,
+    failedCount: 0,
+    completedCount: 0,
+    settledSessionCount: 0,
+  };
+
+  // 1. Q-18: unanswered proposals expire.
+  const expired = await client.barterCycle.updateMany({
+    where: { status: "PROPOSED", respondByAt: { lte: now } },
+    data: { status: "EXPIRED", resolvedAt: now },
+  });
+  result.expiredCount = expired.count;
+
+  // 2 + 3. Active cycles: fail or complete.
+  const activeCycles = await client.barterCycle.findMany({
+    where: { status: "ACTIVE" },
+    include: {
+      participants: { orderBy: { position: "asc" } },
+      sessions: { select: { id: true, status: true, teacherId: true, learnerId: true } },
+    },
+  });
+
+  for (const cycle of activeCycles) {
+    if (cycle.participants.length !== 3) continue; // malformed: leave it to the admin
+    try {
+      const hasFailedSession = cycle.sessions.some((s) =>
+        FAILED_BARTER_SESSION_STATUSES.has(s.status),
+      );
+
+      // Each participant at position p teaches position (p + 1) % 3.
+      const bookedPairs = new Set(
+        cycle.sessions
+          .filter((s) => !VOID_BARTER_SESSION_STATUSES.has(s.status))
+          .map((s) => pairKey(s.teacherId, s.learnerId)),
+      );
+      const requiredPairs = cycle.participants.map((p) => {
+        const learner = cycle.participants.find((q) => q.position === (p.position + 1) % 3);
+        return learner ? pairKey(p.userId, learner.userId) : null;
+      });
+      const missedDeadline =
+        cycle.scheduleByAt !== null &&
+        cycle.scheduleByAt <= now &&
+        requiredPairs.some((k) => k === null || !bookedPairs.has(k));
+
+      if (hasFailedSession || missedDeadline) {
+        const failed = await client.barterCycle.updateMany({
+          where: { id: cycle.id, status: "ACTIVE" },
+          data: { status: "FAILED", resolvedAt: now },
+        });
+        result.failedCount += failed.count;
+        continue;
+      }
+
+      const completed = cycle.sessions.filter((s) => s.status === "BARTER_COMPLETED");
+      if (completed.length === 3) {
+        await completeSuccessfulBarterCycle(client, cycle.id, now);
+        result.completedCount += 1;
+      }
+    } catch {
+      // Another worker got there first, or the cycle is not ready yet: retry on the next run.
+    }
+  }
+
+  // 4. Q-19: settle finished sessions of failed cycles.
+  const toSettle = await client.session.findMany({
+    where: {
+      kind: "BARTER",
+      status: "BARTER_COMPLETED",
+      barterCycle: { status: "FAILED" },
+    },
+    select: { id: true },
+  });
+
+  for (const s of toSettle) {
+    try {
+      const res = await settleFailedBarterCycleSessionTx(client, {
+        sessionId: s.id,
+        memo: "FR-3.4: تسوية جلسة مكتملة من حلقة مقايضة متعثرة",
+      });
+      if (res.applied) result.settledSessionCount += 1;
+    } catch {
+      // Retry on the next run.
+    }
+  }
+
+  return result;
 }
 
 /**

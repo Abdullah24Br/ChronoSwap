@@ -21,6 +21,7 @@ export async function getSessionRoomData(
   sessionId: string,
   userId: string,
   client: PrismaClient = db,
+  now: Date = new Date(),
 ) {
   const session = await client.session.findUnique({
     where: { id: sessionId },
@@ -98,7 +99,7 @@ export async function getSessionRoomData(
 
   // Record attendance if session is active (FR-5.1)
   if (session.status === "ACCEPTED" || session.status === "IN_PROGRESS") {
-    await recordSessionAttendance(userId, session.id, "JOIN", client);
+    await recordSessionAttendance(userId, session.id, "JOIN", client, now);
   }
 
   // Re-fetch session status in case both joined and status transitioned to IN_PROGRESS

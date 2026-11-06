@@ -92,8 +92,8 @@ describe("48-Hour Escrow Auto-Release & Safe Fallback (Module 8: FR-8.4, FR-8.5)
     });
 
     await acceptSessionRequest(teacher.id, { sessionId: session.id });
-    await recordSessionAttendance(teacher.id, session.id, "JOIN");
-    await recordSessionAttendance(learner.id, session.id, "JOIN");
+    await recordSessionAttendance(teacher.id, session.id, "JOIN", db, startAt);
+    await recordSessionAttendance(learner.id, session.id, "JOIN", db, startAt);
 
     // Mark agenda tasks done
     await db.agendaTask.updateMany({

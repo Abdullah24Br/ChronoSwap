@@ -37,5 +37,11 @@ export const QUIZ_QUESTION_COUNT = 3;
 export const RATING_MIN_STARS = 1;
 export const RATING_MAX_STARS = 5;
 
+/** FR-3.4 / Q-18: the other two participants must answer a cycle proposal within 72 hours. */
+export const BARTER_PROPOSAL_TTL_MINUTES = 72 * 60;
+
+/** FR-3.4 / Q-18: all three cycle sessions must be booked within 14 days of activation. */
+export const BARTER_SCHEDULE_WINDOW_MINUTES = 14 * 24 * 60;
+
 /** NFR-5: give up on the AI and use the fallback after this long. */
 export const AI_TIMEOUT_MS = 30_000;
