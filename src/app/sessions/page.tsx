@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/server/auth/session";
 import { getUserSessions } from "@/server/services/sessions/booking-service";
 import { SessionsDashboard } from "@/components/sessions/sessions-dashboard";
-import { CalendarClock } from "lucide-react";
+import { BookOpenCheck, CalendarClock } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 
 export const instant = false;
 
@@ -32,6 +33,10 @@ export default async function SessionsPage() {
             إدارة الطلبات الواردة من المتعلمين، متابعة طلباتك، والانضمام إلى الجلسات المؤكدة.
           </p>
         </div>
+        {/* FR-5.5 */}
+        <ButtonLink href="/archive" variant="outline" size="sm" icon={<BookOpenCheck className="size-4" />}>
+          أرشيف التعلّم
+        </ButtonLink>
       </div>
 
       {/* Main Dashboard */}
