@@ -10,12 +10,16 @@ import {
   archiveSkillAction,
   createCategoryAction,
   createSkillAction,
+  updateCategoryAction,
+  updateSkillAction,
 } from "@/server/actions/admin";
 import type { getAdminTaxonomy } from "@/server/services/admin/skills-admin-service";
 import {
   AlertCircle,
   Archive,
+  ArchiveRestore,
   FolderPlus,
+  Pencil,
   Plus,
   Tag,
 } from "lucide-react";
@@ -39,6 +43,9 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
   const [catNameAr, setCatNameAr] = useState("");
   const [catNameEn, setCatNameEn] = useState("");
   const [catSlug, setCatSlug] = useState("");
+
+  // FR-7.1: inline edit of one category or skill at a time
+  const [editing, setEditing] = useState<EditTarget | null>(null);
 
   // Add skill fields
   const [skillNameAr, setSkillNameAr] = useState("");
@@ -115,6 +122,48 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
     });
   };
 
+  const runUpdate = (
+    action: () => Promise<{ ok: true } | { ok: false; error: { message: string } }>,
+    onDone?: () => void,
+  ) => {
+    setErrorMessage(null);
+    startTransition(async () => {
+      const res = await action();
+      if (!res.ok) {
+        setErrorMessage(res.error.message);
+        return;
+      }
+      onDone?.();
+      router.refresh();
+    });
+  };
+
+  const handleSaveEdit = (draft: EditTarget) => {
+    if (draft.nameAr.trim().length < 2 || draft.slug.trim().length < 2) {
+      setErrorMessage("الاسم بالعربية والرمز اللطيف مطلوبان (حرفان على الأقل)");
+      return;
+    }
+    const common = {
+      nameAr: draft.nameAr.trim(),
+      nameEn: draft.nameEn.trim() || undefined,
+      slug: draft.slug.trim().toLowerCase(),
+    };
+    runUpdate(
+      () =>
+        draft.kind === "category"
+          ? updateCategoryAction({ categoryId: draft.id, ...common })
+          : updateSkillAction({ skillId: draft.id, categoryId: draft.categoryId, ...common }),
+      () => setEditing(null),
+    );
+  };
+
+  const handleRestore = (kind: EditTarget["kind"], id: string) =>
+    runUpdate(() =>
+      kind === "category"
+        ? updateCategoryAction({ categoryId: id, isActive: true })
+        : updateSkillAction({ skillId: id, isActive: true }),
+    );
+
   const handleArchiveSkill = (skillId: string) => {
     if (!confirm("هل أنت متأكد من أرشفة هذه المهارة؟")) return;
 
@@ -153,7 +202,7 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
 
       {/* Error Banner */}
       {errorMessage && (
-        <div className="flex items-center gap-2 rounded-xl border border-red/30 bg-red/10 p-3 text-xs text-red">
+        <div className="flex items-center gap-2 rounded-xl border border-danger/30 bg-danger-soft p-3 text-xs text-danger">
           <AlertCircle className="size-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -233,7 +282,7 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
           initialTaxonomy.map((category) => (
             <Card key={category.id} className="border-line overflow-hidden">
               <CardHeader className="bg-raised/30 border-b border-line px-5 py-3 flex flex-row items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-bold text-sm text-fg">{category.nameAr}</h3>
                   {category.nameEn && (
                     <span className="text-xs text-muted">({category.nameEn})</span>
@@ -263,11 +312,39 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
                     <Plus className="size-3 me-1" />
                     <span>إضافة مهارة</span>
                   </Button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditing({
+                        kind: "category",
+                        id: category.id,
+                        nameAr: category.nameAr,
+                        nameEn: category.nameEn ?? "",
+                        slug: category.slug,
+                      })
+                    }
+                    className="p-1 text-muted hover:text-fg transition-colors"
+                    title="تعديل التصنيف"
+                    aria-label={`تعديل التصنيف ${category.nameAr}`}
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                  {!category.isActive && (
+                    <button
+                      type="button"
+                      onClick={() => handleRestore("category", category.id)}
+                      className="p-1 text-muted hover:text-success transition-colors"
+                      title="استعادة التصنيف"
+                      aria-label={`استعادة التصنيف ${category.nameAr}`}
+                    >
+                      <ArchiveRestore className="size-3.5" />
+                    </button>
+                  )}
                   {category.isActive && (
                     <button
                       type="button"
                       onClick={() => handleArchiveCategory(category.id)}
-                      className="p-1 text-muted hover:text-red transition-colors"
+                      className="p-1 text-muted hover:text-danger transition-colors"
                       title="أرشفة التصنيف"
                     >
                       <Archive className="size-3.5" />
@@ -277,6 +354,17 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
               </CardHeader>
 
               <CardContent className="p-4 space-y-3">
+                {editing?.kind === "category" && editing.id === category.id && (
+                  <EditForm
+                    draft={editing}
+                    categories={initialTaxonomy}
+                    pending={isPending}
+                    onChange={setEditing}
+                    onCancel={() => setEditing(null)}
+                    onSave={handleSaveEdit}
+                  />
+                )}
+
                 {/* Add Skill to this Category Form */}
                 {selectedCatForSkill === category.id && (
                   <div className="p-3 rounded-xl border border-line bg-surface space-y-2 mb-3">
@@ -338,7 +426,19 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                    {category.skills.map((skill) => (
+                    {category.skills.map((skill) =>
+                      editing?.kind === "skill" && editing.id === skill.id ? (
+                        <div key={skill.id} className="sm:col-span-2 md:col-span-3">
+                          <EditForm
+                            draft={editing}
+                            categories={initialTaxonomy}
+                            pending={isPending}
+                            onChange={setEditing}
+                            onCancel={() => setEditing(null)}
+                            onSave={handleSaveEdit}
+                          />
+                        </div>
+                      ) : (
                       <div
                         key={skill.id}
                         className={`flex items-center justify-between p-2.5 rounded-xl border transition-colors ${
@@ -361,18 +461,50 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
                           </span>
                         </div>
 
+                        <div className="flex items-center">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditing({
+                              kind: "skill",
+                              id: skill.id,
+                              nameAr: skill.nameAr,
+                              nameEn: skill.nameEn ?? "",
+                              slug: skill.slug,
+                              categoryId: category.id,
+                            })
+                          }
+                          className="p-1 text-muted hover:text-fg transition-colors"
+                          title="تعديل المهارة"
+                          aria-label={`تعديل المهارة ${skill.nameAr}`}
+                        >
+                          <Pencil className="size-3.5" />
+                        </button>
+                        {!skill.isActive && (
+                          <button
+                            type="button"
+                            onClick={() => handleRestore("skill", skill.id)}
+                            className="p-1 text-muted hover:text-success transition-colors"
+                            title="استعادة المهارة"
+                            aria-label={`استعادة المهارة ${skill.nameAr}`}
+                          >
+                            <ArchiveRestore className="size-3.5" />
+                          </button>
+                        )}
                         {skill.isActive && (
                           <button
                             type="button"
                             onClick={() => handleArchiveSkill(skill.id)}
-                            className="p-1 text-muted hover:text-red transition-colors"
+                            className="p-1 text-muted hover:text-danger transition-colors"
                             title="أرشفة المهارة"
                           >
                             <Archive className="size-3.5" />
                           </button>
                         )}
+                        </div>
                       </div>
-                    ))}
+                      ),
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -381,5 +513,91 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
         )}
       </div>
     </div>
+  );
+}
+
+interface EditTarget {
+  kind: "category" | "skill";
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  slug: string;
+  /** skills only: may be moved to another category */
+  categoryId?: string;
+}
+
+function EditForm({
+  draft,
+  categories,
+  pending,
+  onChange,
+  onCancel,
+  onSave,
+}: {
+  draft: EditTarget;
+  categories: AdminTaxonomyData;
+  pending: boolean;
+  onChange: (next: EditTarget) => void;
+  onCancel: () => void;
+  onSave: (draft: EditTarget) => void;
+}) {
+  const field = "w-full rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-xs text-fg focus:border-amber focus:outline-none";
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(draft);
+      }}
+      className="space-y-2 rounded-xl border border-amber/30 bg-surface p-3"
+    >
+      <h5 className="flex items-center gap-1 text-[0.7rem] font-bold text-fg">
+        <Pencil className="size-3 text-amber" />
+        <span>{draft.kind === "category" ? "تعديل التصنيف" : "تعديل المهارة"}</span>
+      </h5>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <input
+          aria-label="الاسم بالعربية"
+          value={draft.nameAr}
+          onChange={(e) => onChange({ ...draft, nameAr: e.target.value })}
+          className={field}
+        />
+        <input
+          aria-label="الاسم بالإنجليزية"
+          placeholder="الاسم بالإنجليزية"
+          value={draft.nameEn}
+          onChange={(e) => onChange({ ...draft, nameEn: e.target.value })}
+          className={field}
+        />
+        <input
+          aria-label="الرمز اللطيف (Slug)"
+          dir="ltr"
+          value={draft.slug}
+          onChange={(e) => onChange({ ...draft, slug: e.target.value })}
+          className={`${field} font-mono`}
+        />
+      </div>
+      {draft.kind === "skill" && (
+        <select
+          aria-label="التصنيف"
+          value={draft.categoryId}
+          onChange={(e) => onChange({ ...draft, categoryId: e.target.value })}
+          className={field}
+        >
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nameAr}
+            </option>
+          ))}
+        </select>
+      )}
+      <div className="flex justify-end gap-2 pt-1">
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-7 px-2 text-xs">
+          إلغاء
+        </Button>
+        <Button type="submit" variant="primary" size="sm" disabled={pending} className="h-7 px-2.5 text-xs">
+          حفظ التعديلات
+        </Button>
+      </div>
+    </form>
   );
 }
