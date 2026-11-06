@@ -6,7 +6,7 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-// Routes are built in later phases; until then they land on the "under construction" page.
+// Main destinations (desktop top bar + mobile bottom bar). /archive is linked from /sessions.
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "الرئيسية", icon: House },
   { href: "/explore", label: "استكشاف", icon: Compass }, // FR-3.1 / FR-3.2

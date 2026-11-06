@@ -102,7 +102,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
 
       {/* Global Error Banner */}
       {errorMessage && (
-        <div className="flex items-center gap-2 rounded-xl border border-red/30 bg-red/10 p-3.5 text-xs text-red">
+        <div className="flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/10 p-3.5 text-xs text-danger">
           <AlertCircle className="size-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -112,7 +112,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
       <Card className="border-line p-5 space-y-3 bg-raised/20">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Scale className="size-4 text-red" />
+            <Scale className="size-4 text-danger" />
             <h3 className="font-bold text-sm text-fg">بيانات الشكوى / سبب الإحالة</h3>
           </div>
           <span className="text-[0.65rem] text-muted">
@@ -162,13 +162,13 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
                     key={task.id}
                     className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs ${
                       task.isDone
-                        ? "bg-emerald/5 border-emerald/30 text-fg"
+                        ? "bg-success/5 border-success/30 text-fg"
                         : "bg-canvas border-line text-muted"
                     }`}
                   >
                     <span className="mt-0.5">
                       {task.isDone ? (
-                        <CheckCircle2 className="size-4 text-emerald" />
+                        <CheckCircle2 className="size-4 text-success" />
                       ) : (
                         <Square className="size-4 text-muted" />
                       )}
@@ -268,7 +268,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
                       <div className="flex items-center gap-2">
                         <span
                           className={`size-2 rounded-full ${
-                            log.event === "JOIN" ? "bg-emerald" : "bg-red"
+                            log.event === "JOIN" ? "bg-success" : "bg-danger"
                           }`}
                         />
                         <strong className="text-fg">{log.user.displayName}</strong>
@@ -361,7 +361,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
                       onClick={() => setSelectedResolution("PAY_TEACHER")}
                       className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                         selectedResolution === "PAY_TEACHER"
-                          ? "border-emerald bg-emerald/5 text-fg"
+                          ? "border-success bg-success/5 text-fg"
                           : "border-line bg-canvas text-muted hover:border-line-strong"
                       }`}
                     >

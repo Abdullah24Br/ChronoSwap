@@ -105,3 +105,6 @@ stateDiagram-v2
 - **"Release to teacher"** credits the teacher's debt first if they have any (FR-3.4: debt is taken from the first hours earned).
 - **Barter cycle status** (`BarterCycle.status`) is separate: PROPOSED → ACTIVE (all accepted) → COMPLETED or FAILED; PROPOSED → DECLINED or EXPIRED. Barter sessions are created only after the cycle is ACTIVE.
 - **When a cycle fails**, sessions already BARTER_COMPLETED are settled at once. Sessions still running continue, and each is settled as soon as it reaches BARTER_COMPLETED.
+- **A barter learner no-show** (NO_SHOW_LEARNER) is settled as a normal session (learner pays the teacher, shortfall becomes debt) but keeps its NO_SHOW_LEARNER status, and the cycle becomes FAILED (Q-17).
+- **System transitions** run in `runScheduledJobs()` ([src/server/jobs/run-scheduled-jobs.ts](../src/server/jobs/run-scheduled-jobs.ts)) every minute: auto-reject, no-show, timer, 48h release, and barter cycle upkeep (NFR-3).
+- **Attendance** counts only for room entries inside [start − 15 min, start + 15 min] (Q-8). Opening the room earlier is allowed but does not start the session.

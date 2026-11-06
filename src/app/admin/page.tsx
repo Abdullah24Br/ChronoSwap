@@ -42,7 +42,7 @@ export default async function AdminStatsPage() {
         <Card className="border-line p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted">الساعات المتبادلة (FR-7.3)</span>
-            <div className="flex size-8 items-center justify-center rounded-lg bg-emerald/10 text-emerald">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-success/10 text-success">
               <Clock className="size-4" />
             </div>
           </div>
@@ -81,7 +81,7 @@ export default async function AdminStatsPage() {
         {/* Open Disputes */}
         <Card
           className={`border-line p-4 ${
-            stats.openDisputesCount > 0 ? "border-red/40 bg-red/5" : ""
+            stats.openDisputesCount > 0 ? "border-danger/40 bg-danger/5" : ""
           }`}
         >
           <div className="flex items-center justify-between">
@@ -89,7 +89,7 @@ export default async function AdminStatsPage() {
             <div
               className={`flex size-8 items-center justify-center rounded-lg ${
                 stats.openDisputesCount > 0
-                  ? "bg-red/20 text-red"
+                  ? "bg-danger/20 text-danger"
                   : "bg-surface text-muted"
               }`}
             >
@@ -100,7 +100,7 @@ export default async function AdminStatsPage() {
             <div>
               <h3
                 className={`font-mono text-2xl font-bold ${
-                  stats.openDisputesCount > 0 ? "text-red" : "text-fg"
+                  stats.openDisputesCount > 0 ? "text-danger" : "text-fg"
                 }`}
               >
                 {stats.openDisputesCount}
@@ -112,7 +112,7 @@ export default async function AdminStatsPage() {
             {stats.openDisputesCount > 0 && (
               <Link
                 href="/admin/disputes"
-                className="inline-flex items-center gap-1 text-[0.7rem] font-bold text-red hover:underline"
+                className="inline-flex items-center gap-1 text-[0.7rem] font-bold text-danger hover:underline"
               >
                 <span>مراجعة النزاعات</span>
                 <ArrowRight className="size-3" />

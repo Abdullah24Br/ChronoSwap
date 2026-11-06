@@ -9,7 +9,7 @@ interface WalletSummaryProps {
 }
 
 // FR-2.1 wallet header: available (amber, spendable) · frozen (cyan, in escrow) · debt (FR-3.4).
-// Presentational only; data comes from the wallet service in Phase 1.
+// Presentational only; data comes from getWalletDashboard() (FR-2.1).
 export function WalletSummary({ availableMinutes, frozenMinutes, debtMinutes }: WalletSummaryProps) {
   return (
     <Card accent="split" className="p-0">

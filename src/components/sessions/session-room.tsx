@@ -458,10 +458,10 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
         {/* Status / Timer Pill */}
         <div className="flex items-center gap-3">
           {!isEnded ? (
-            <div className="flex items-center gap-2.5 rounded-xl border border-emerald/30 bg-emerald/10 px-4 py-2 text-emerald">
+            <div className="flex items-center gap-2.5 rounded-xl border border-success/30 bg-success/10 px-4 py-2 text-success">
               <Clock className="size-4 animate-spin" style={{ animationDuration: "8s" }} />
               <div className="text-xs">
-                <span className="text-[0.65rem] text-emerald/80 block">الوقت المتبقي للجلسة</span>
+                <span className="text-[0.65rem] text-success/80 block">الوقت المتبقي للجلسة</span>
                 <span className="font-mono font-bold text-sm tracking-wider">
                   {formatTimer(timeLeftMs)}
                 </span>
@@ -469,7 +469,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
             </div>
           ) : (
             <div className="flex items-center gap-2 rounded-xl border border-line bg-raised px-4 py-2 text-xs text-muted">
-              <CheckCircle2 className="size-4 text-emerald" />
+              <CheckCircle2 className="size-4 text-success" />
               <span>الجلسة مكتملة ومحفوظة في سجل الأرشيف الدائم</span>
             </div>
           )}
@@ -478,7 +478,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
 
       {/* Global Error Banner */}
       {errorMessage && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-red/30 bg-red/10 p-3.5 text-xs text-red">
+        <div className="flex items-center gap-2.5 rounded-xl border border-danger/30 bg-danger/10 p-3.5 text-xs text-danger">
           <AlertCircle className="size-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -538,7 +538,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                 href={session.meetingUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald px-4 py-2 text-xs font-bold text-canvas shadow-sm hover:bg-emerald-ink transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-success px-4 py-2 text-xs font-bold text-canvas shadow-sm hover:brightness-110 transition-colors"
               >
                 <Video className="size-4" />
                 <span>انضمام للمكالمة المرئية</span>
@@ -636,7 +636,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                     <Sparkles className="size-3.5 text-amber" />
                     <span>الملخص الذكي والتمارين</span>
                     {session.aiSummary?.status === "SUCCEEDED" && (
-                      <span className="size-1.5 rounded-full bg-emerald" />
+                      <span className="size-1.5 rounded-full bg-success" />
                     )}
                   </button>
                   <button
@@ -651,7 +651,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                     <Award className="size-3.5 text-amber" />
                     <span>اختبار الفهم (FR-8.3)</span>
                     {session.quiz?.attempt || quizSubmitted ? (
-                      <span className="size-1.5 rounded-full bg-emerald" />
+                      <span className="size-1.5 rounded-full bg-success" />
                     ) : session.quiz ? (
                       <span className="size-1.5 rounded-full bg-amber animate-pulse" />
                     ) : null}
@@ -683,7 +683,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                         title="نسخ الكود"
                       >
                         {codeCopied ? (
-                          <Check className="size-3.5 text-emerald" />
+                          <Check className="size-3.5 text-success" />
                         ) : (
                           <Copy className="size-3.5" />
                         )}
@@ -763,7 +763,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                         (session.aiSummary.keyPoints as string[]).length > 0 && (
                           <div className="space-y-2">
                             <h5 className="text-xs font-bold text-fg flex items-center gap-1.5">
-                              <CheckCircle2 className="size-3.5 text-emerald" />
+                              <CheckCircle2 className="size-3.5 text-success" />
                               <span>النقاط والمفاهيم الجوهرية المستفادة</span>
                             </h5>
                             <div className="space-y-1.5">
@@ -772,7 +772,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                                   key={idx}
                                   className="flex items-start gap-2 text-xs p-2.5 rounded-lg border border-line bg-surface/50 text-fg"
                                 >
-                                  <span className="flex size-4 items-center justify-center rounded-full bg-emerald/10 text-emerald text-[0.6rem] font-bold shrink-0 mt-0.5">
+                                  <span className="flex size-4 items-center justify-center rounded-full bg-success/10 text-success text-[0.6rem] font-bold shrink-0 mt-0.5">
                                     ✓
                                   </span>
                                   <span className="leading-relaxed">{point}</span>
@@ -891,7 +891,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                           </p>
                         </div>
                         {(session.quiz.attempt || quizResult) && (
-                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald/30 bg-emerald/10 text-emerald text-xs font-bold shrink-0">
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-success/30 bg-success/10 text-success text-xs font-bold shrink-0">
                             <CheckCircle2 className="size-4" />
                             <span>
                               النتيجة: {quizResult ? quizResult.correctCount : session.quiz.attempt?.correctCount} من{" "}
@@ -924,7 +924,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
 
                       {/* Notice for Released status */}
                       {(session.status === "RELEASED" || (session.kind === "DIRECT" && (session.quiz.attempt || quizSubmitted))) && (
-                        <div className="p-4 rounded-xl border border-emerald/30 bg-emerald/5 text-xs text-emerald space-y-1">
+                        <div className="p-4 rounded-xl border border-success/30 bg-success/5 text-xs text-success space-y-1">
                           <div className="font-bold flex items-center gap-1.5">
                             <CheckCircle2 className="size-3.5" />
                             <span>تم تحرير رصيد الساعات بنجاح</span>
@@ -951,8 +951,8 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                               className={`p-4 rounded-xl border transition-all ${
                                 hasAttempt
                                   ? isQuestionCorrect
-                                    ? "border-emerald/30 bg-emerald/5"
-                                    : "border-red/30 bg-red/5"
+                                    ? "border-success/30 bg-success/5"
+                                    : "border-danger/30 bg-danger/5"
                                   : "border-line bg-canvas"
                               }`}
                             >
@@ -964,8 +964,8 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                                   <span
                                     className={`text-[0.65rem] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                                       isQuestionCorrect
-                                        ? "bg-emerald/20 text-emerald"
-                                        : "bg-red/20 text-red"
+                                        ? "bg-success/20 text-success"
+                                        : "bg-danger/20 text-danger"
                                     }`}
                                   >
                                     {isQuestionCorrect ? "إجابة صحيحة ✓" : "إجابة خاطئة ✗"}
@@ -993,9 +993,9 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                                       className={`flex items-center justify-between p-3 rounded-lg border text-xs transition-colors ${
                                         hasAttempt
                                           ? isCorrect
-                                            ? "border-emerald bg-emerald/15 font-bold text-emerald"
+                                            ? "border-success bg-success/15 font-bold text-success"
                                             : isWrongChoice
-                                              ? "border-red bg-red/15 text-red font-medium"
+                                              ? "border-danger bg-danger/15 text-danger font-medium"
                                               : "border-line bg-surface/40 text-muted opacity-70"
                                           : isSelected
                                             ? "border-amber bg-amber/10 text-amber font-bold cursor-pointer"
@@ -1009,9 +1009,9 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                                           className={`flex size-5 items-center justify-center rounded-full text-[0.65rem] font-mono font-bold shrink-0 ${
                                             hasAttempt
                                               ? isCorrect
-                                                ? "bg-emerald text-white"
+                                                ? "bg-success text-canvas"
                                                 : isWrongChoice
-                                                  ? "bg-red text-white"
+                                                  ? "bg-danger text-canvas"
                                                   : "bg-raised text-muted"
                                               : isSelected
                                                 ? "bg-amber text-canvas"
@@ -1025,13 +1025,13 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                                       {hasAttempt && (
                                         <div className="shrink-0 text-[0.7rem]">
                                           {isCorrect && (
-                                            <span className="text-emerald font-bold flex items-center gap-1">
+                                            <span className="text-success font-bold flex items-center gap-1">
                                               <Check className="size-3.5" />
                                               <span>الإجابة النموذجية</span>
                                             </span>
                                           )}
                                           {isWrongChoice && (
-                                            <span className="text-red font-bold flex items-center gap-1">
+                                            <span className="text-danger font-bold flex items-center gap-1">
                                               <XCircle className="size-3.5" />
                                               <span>إجابتك</span>
                                             </span>
@@ -1118,7 +1118,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                 <div
                   className={`h-full transition-all duration-300 ${
                     completionPercent >= COMPLETION_THRESHOLD_PERCENT
-                      ? "bg-emerald"
+                      ? "bg-success"
                       : "bg-amber"
                   }`}
                   style={{ width: `${completionPercent}%` }}
@@ -1138,7 +1138,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                     onClick={() => handleToggleTask(task.id)}
                     className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
                       task.isDone
-                        ? "bg-emerald/5 border-emerald/30 text-fg"
+                        ? "bg-success/5 border-success/30 text-fg"
                         : "bg-canvas border-line text-fg hover:border-line-strong"
                     } ${isEnded ? "cursor-default" : ""}`}
                   >
@@ -1148,7 +1148,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                       className="mt-0.5 text-muted hover:text-fg transition-colors"
                     >
                       {task.isDone ? (
-                        <CheckSquare className="size-4 text-emerald" />
+                        <CheckSquare className="size-4 text-success" />
                       ) : (
                         <Square className="size-4 text-muted" />
                       )}
@@ -1301,8 +1301,8 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
 
           {/* FR-6.4: Dispute / Problem Report Card */}
           {session.status === "DISPUTED" || disputeSuccess ? (
-            <Card className="border-red/30 bg-red/5 p-4 text-xs space-y-2">
-              <div className="flex items-center gap-2 text-red font-bold">
+            <Card className="border-danger/30 bg-danger/5 p-4 text-xs space-y-2">
+              <div className="flex items-center gap-2 text-danger font-bold">
                 <AlertTriangle className="size-4 shrink-0" />
                 <span>الجلسة قيد النزاع والاعتراض</span>
               </div>
@@ -1342,7 +1342,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                     value={disputeReason}
                     onChange={(e) => setDisputeReason(e.target.value)}
                     placeholder="اشرح المشكلة بوضوح (غياب غير مسجل، شرح غير لائق، انقطاع...)"
-                    className="w-full rounded-lg border border-line bg-canvas p-2.5 text-xs text-fg placeholder:text-muted focus:border-red focus:outline-none leading-relaxed"
+                    className="w-full rounded-lg border border-line bg-canvas p-2.5 text-xs text-fg placeholder:text-muted focus:border-danger focus:outline-none leading-relaxed"
                   />
                   <div className="flex items-center justify-end gap-2">
                     <Button

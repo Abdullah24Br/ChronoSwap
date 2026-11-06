@@ -35,7 +35,7 @@ export default async function AdminLayout({
       <main className="container mx-auto px-4 py-16 max-w-lg">
         <Card className="p-8 text-center border-line">
           <CardContent className="space-y-4">
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-red/10 text-red mx-auto">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-danger/10 text-danger mx-auto">
               <ShieldAlert className="size-7" />
             </div>
             <h2 className="text-xl font-bold text-fg">غير مصرح بالدخول</h2>
@@ -94,7 +94,7 @@ export default async function AdminLayout({
             href="/admin/disputes"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors border border-line bg-surface hover:bg-raised text-fg"
           >
-            <Scale className="size-3.5 text-red" />
+            <Scale className="size-3.5 text-danger" />
             <span>قضايا النزاع (FR-7.2)</span>
           </Link>
         </nav>

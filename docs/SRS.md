@@ -258,13 +258,13 @@ A → B → C → A
 
 ## Traceability index
 
-| Area | Requirements | Main code location (current / planned) |
+| Area | Requirements | Main code location |
 |---|---|---|
-| Accounts | FR-1.1 – FR-1.4 | `src/server/auth/*`, `prisma/schema.prisma` (User, AuthSession, EmailVerificationToken, WelcomeBonusGrant, UserSkill, AvailabilitySlot) |
-| Wallet | FR-2.1 – FR-2.4, NFR-2 | `src/server/services/wallet/*` (Wallet, LedgerEntry) |
-| Barter | FR-3.1 – FR-3.4 | `src/server/services/barter/*` (BarterCycle, BarterParticipant, Debt) |
-| Sessions | FR-4.1 – FR-4.6, FR-6.x | `src/server/domain/session-state-machine.ts`, `src/server/services/sessions/*` |
-| Room | FR-5.1 – FR-5.5 | AttendanceLog, AgendaTask, SessionWorkspace |
-| Admin | FR-7.1 – FR-7.3 | Dispute, `src/app/admin/*` |
-| AI | FR-4.3, FR-4.4, FR-8.x, NFR-5 | AiSummary, Quiz, QuizQuestion, QuizAttempt, `src/server/services/ai/*` |
-| Jobs | NFR-3 | `src/server/jobs/*` |
+| Accounts | FR-1.1 – FR-1.4 | `src/server/services/auth/*`, `src/server/auth/*`, `src/server/services/skills/*`, `src/server/services/availability/*`, `src/app/(auth)/*`, `src/app/profile` |
+| Wallet | FR-2.1 – FR-2.4, NFR-2 | `src/server/services/wallet/*` (ledger.ts, wallet-service.ts), `src/app/wallet` |
+| Search & barter | FR-3.1 – FR-3.4 | `src/server/services/search/*`, `src/server/services/barter/*` (barter-service.ts, barter-overview.ts), `src/app/explore`, `src/app/barter` |
+| Sessions | FR-4.1 – FR-4.6, FR-6.x | `src/server/domain/session-state-machine.ts`, `src/server/services/sessions/*` (booking, cancellation, room, timer, release, rating, dispute), `src/app/sessions/*` |
+| Room & archive | FR-5.1 – FR-5.5 | `room-service.ts`, `src/components/sessions/session-room.tsx`, `archive-service.ts`, `src/app/archive` |
+| Admin | FR-7.1 – FR-7.3 | `src/server/services/admin/*`, `src/app/admin/*` |
+| AI | FR-4.3, FR-4.4, FR-8.x, NFR-5 | `src/server/services/ai/*` (gemini-client.ts, agenda-service.ts, summary-quiz-service.ts) |
+| Jobs | NFR-3 | `src/server/jobs/run-scheduled-jobs.ts`, `src/instrumentation.ts`, `src/app/api/jobs/run/route.ts` |

@@ -30,11 +30,11 @@ export default async function AdminDisputesPage() {
       <Card className="border-line overflow-hidden">
         <CardHeader className="border-b border-line px-5 py-3.5 bg-raised/30 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-bold flex items-center gap-2 text-fg">
-            <Scale className="size-4 text-red" />
+            <Scale className="size-4 text-danger" />
             <span>سجل النزاعات ({disputes.length})</span>
           </CardTitle>
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-red font-semibold">{openDisputes.length} قيد النظر</span>
+            <span className="text-danger font-semibold">{openDisputes.length} قيد النظر</span>
             <span>•</span>
             <span className="text-muted">{resolvedDisputes.length} مفصول فيها</span>
           </div>

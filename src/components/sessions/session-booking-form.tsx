@@ -123,9 +123,9 @@ export function SessionBookingForm({
 
   if (success) {
     return (
-      <Card className="border-emerald/30 bg-emerald/5 p-8 text-center max-w-xl mx-auto">
+      <Card className="border-success/30 bg-success/5 p-8 text-center max-w-xl mx-auto">
         <div className="flex flex-col items-center gap-3">
-          <div className="flex size-14 items-center justify-center rounded-full bg-emerald-soft text-emerald">
+          <div className="flex size-14 items-center justify-center rounded-full bg-success-soft text-success">
             <CheckCircle2 className="size-8" />
           </div>
           <h2 className="text-xl font-bold text-fg">تم إرسال طلب الحجز بنجاح!</h2>
@@ -172,7 +172,7 @@ export function SessionBookingForm({
 
       {/* Debt Warning */}
       {hasDebt && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-red/30 bg-red/10 p-4 text-xs text-red">
+        <div className="flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs text-danger">
           <AlertCircle className="size-4 shrink-0 mt-0.5" />
           <div>
             <strong className="block font-semibold">تنبيه: لديك ديون غير مسددة ({learnerDebtMinutes} دقيقة)</strong>
@@ -341,7 +341,7 @@ export function SessionBookingForm({
 
       {/* Error Alert */}
       {error && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-red/30 bg-red/10 p-3.5 text-xs text-red">
+        <div className="flex items-center gap-2.5 rounded-xl border border-danger/30 bg-danger/10 p-3.5 text-xs text-danger">
           <AlertCircle className="size-4 shrink-0" />
           <span>{error}</span>
         </div>

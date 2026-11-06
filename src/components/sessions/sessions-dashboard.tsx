@@ -133,7 +133,7 @@ export function SessionsDashboard({
     <div className="space-y-6">
       {/* Global Action Error Alert */}
       {actionError && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-red/30 bg-red/10 p-3.5 text-xs text-red">
+        <div className="flex items-center gap-2.5 rounded-xl border border-danger/30 bg-danger/10 p-3.5 text-xs text-danger">
           <AlertCircle className="size-4 shrink-0" />
           <span>{actionError}</span>
         </div>
@@ -288,9 +288,9 @@ export function SessionsDashboard({
 
                   {/* Accept Form Popdown */}
                   {showAcceptFormId === req.id && (
-                    <div className="rounded-xl bg-emerald/5 border border-emerald/30 p-4 space-y-3">
+                    <div className="rounded-xl bg-success/5 border border-success/30 p-4 space-y-3">
                       <h5 className="font-bold text-xs text-fg flex items-center gap-1.5">
-                        <Video className="size-4 text-emerald" />
+                        <Video className="size-4 text-success" />
                         <span>رابط مكالمة الجلسة (اختياري)</span>
                       </h5>
                       <input
@@ -303,7 +303,7 @@ export function SessionsDashboard({
                             [req.id]: e.target.value,
                           })
                         }
-                        className="w-full rounded-lg border border-line bg-canvas px-3 py-2 text-xs text-fg font-mono placeholder:font-sans focus:border-emerald focus:outline-none"
+                        className="w-full rounded-lg border border-line bg-canvas px-3 py-2 text-xs text-fg font-mono placeholder:font-sans focus:border-success focus:outline-none"
                       />
                       <div className="flex items-center gap-2 justify-end">
                         <Button
@@ -329,9 +329,9 @@ export function SessionsDashboard({
 
                   {/* Reject Form Popdown */}
                   {showRejectFormId === req.id && (
-                    <div className="rounded-xl bg-red/5 border border-red/30 p-4 space-y-3">
+                    <div className="rounded-xl bg-danger/5 border border-danger/30 p-4 space-y-3">
                       <h5 className="font-bold text-xs text-fg flex items-center gap-1.5">
-                        <XCircle className="size-4 text-red" />
+                        <XCircle className="size-4 text-danger" />
                         <span>سبب الرفض (اختياري، سيصل للمتعلم)</span>
                       </h5>
                       <textarea
@@ -344,7 +344,7 @@ export function SessionsDashboard({
                             [req.id]: e.target.value,
                           })
                         }
-                        className="w-full rounded-lg border border-line bg-canvas p-2.5 text-xs text-fg placeholder:font-sans focus:border-red focus:outline-none"
+                        className="w-full rounded-lg border border-line bg-canvas p-2.5 text-xs text-fg placeholder:font-sans focus:border-danger focus:outline-none"
                       />
                       <div className="flex items-center gap-2 justify-end">
                         <Button
@@ -377,7 +377,7 @@ export function SessionsDashboard({
                         size="sm"
                         disabled={isPending}
                         onClick={() => setShowRejectFormId(req.id)}
-                        className="text-red hover:bg-red/10 border-line"
+                        className="text-danger hover:bg-danger/10 border-line"
                       >
                         رفض الطلب
                       </Button>
@@ -443,7 +443,7 @@ export function SessionsDashboard({
                         size="sm"
                         disabled={isPending}
                         onClick={() => handleWithdraw(req.id)}
-                        className="text-xs text-red hover:bg-red/10"
+                        className="text-xs text-danger hover:bg-danger/10"
                       >
                         إلغاء الطلب
                       </Button>
@@ -492,11 +492,11 @@ export function SessionsDashboard({
               const partner = isTeacher ? session.learner : session.teacher;
 
               return (
-                <Card key={session.id} className="overflow-hidden border-emerald/30 bg-emerald/5">
+                <Card key={session.id} className="overflow-hidden border-success/30 bg-success/5">
                   <CardContent className="p-5 sm:p-6 space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-soft text-emerald font-bold text-base">
+                        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success font-bold text-base">
                           {partner.displayName.slice(0, 1)}
                         </span>
                         <div>
@@ -519,7 +519,7 @@ export function SessionsDashboard({
                             href={session.meetingUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald px-3.5 py-1.5 text-xs font-bold text-canvas transition-colors hover:bg-emerald-ink"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-success px-3.5 py-1.5 text-xs font-bold text-canvas transition-colors hover:brightness-110"
                           >
                             <Video className="size-3.5" />
                             <span>رابط المكالمة</span>
@@ -543,7 +543,7 @@ export function SessionsDashboard({
                               showCancelFormId === session.id ? null : session.id,
                             )
                           }
-                          className="text-xs text-red hover:bg-red/10"
+                          className="text-xs text-danger hover:bg-danger/10"
                         >
                           إلغاء الجلسة
                         </Button>
@@ -552,7 +552,7 @@ export function SessionsDashboard({
 
                     {/* FR-4.6 Cancel Confirmation Form */}
                     {showCancelFormId === session.id && (
-                      <div className="rounded-xl border border-red/30 bg-red/5 p-4 space-y-3">
+                      <div className="rounded-xl border border-danger/30 bg-danger/5 p-4 space-y-3">
                         {(() => {
                           const isLate =
                             new Date(session.startAt).getTime() - Date.now() <
@@ -560,7 +560,7 @@ export function SessionsDashboard({
                           return (
                             <>
                               <div className="flex items-start gap-2.5 text-xs">
-                                <AlertCircle className="size-4 text-red shrink-0 mt-0.5" />
+                                <AlertCircle className="size-4 text-danger shrink-0 mt-0.5" />
                                 <div>
                                   <strong className="text-fg block mb-1">
                                     {isLate
@@ -587,7 +587,7 @@ export function SessionsDashboard({
                                     [session.id]: e.target.value,
                                   })
                                 }
-                                className="w-full rounded-lg border border-line bg-canvas p-2.5 text-xs text-fg placeholder:font-sans focus:border-red focus:outline-none"
+                                className="w-full rounded-lg border border-line bg-canvas p-2.5 text-xs text-fg placeholder:font-sans focus:border-danger focus:outline-none"
                               />
 
                               <div className="flex items-center justify-end gap-2">
@@ -617,7 +617,7 @@ export function SessionsDashboard({
 
                     <div className="rounded-xl bg-canvas p-3.5 border border-line text-xs flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-fg font-medium">
-                        <Calendar className="size-4 text-emerald" />
+                        <Calendar className="size-4 text-success" />
                         <span>
                           {formatDateTime(new Date(session.startAt), userTimezone, {
                             dateStyle: "full",

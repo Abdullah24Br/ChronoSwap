@@ -121,7 +121,7 @@ If they could, a teacher could add trivial tasks to reach 50% instantly.
 
 ### Q-18 · FR-3.4 · Cycle lifecycle details `DEFAULT`
 - **Proposal:** the barter engine finds the cycle, and the user who triggers the search proposes a duration (30/60/90/120). The other two accept or decline. It expires after **72h** (EXPIRED) and any decline makes it DECLINED.
-- **Booking:** once ACTIVE, each learner books their session through the normal request/accept flow (no freeze). All three sessions must be **booked within 14 days**, otherwise the missing ones count as failed.
+- **Booking:** once ACTIVE, each learner books their session through the normal request/accept flow (no freeze). All three sessions must be **booked within 14 days**, otherwise the missing ones count as failed. The schema allows **one session per teacher per cycle**, so a rejected or cancelled barter request cannot be re-booked: that leg stays missing and the cycle fails at the deadline (implemented in `reconcileBarterCycles`).
 - **Limits:** the FR-6.3 weekly cap applies to barter sessions. Users with debt can't join (Q-16). A user may be in several cycles at once.
 
 ### Q-19 · FR-3.4 · What happens to unfinished sessions when a cycle fails? `DEFAULT`

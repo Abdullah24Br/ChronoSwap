@@ -48,7 +48,7 @@ export default async function SessionRoomPage({ params }: SessionRoomPageProps) 
       <main className="container mx-auto px-4 py-16 max-w-lg">
         <Card className="p-8 text-center border-line">
           <CardContent className="space-y-4">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-red/10 text-red mx-auto">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-danger/10 text-danger mx-auto">
               <AlertCircle className="size-6" />
             </div>
             <h2 className="text-lg font-bold text-fg">تعذر الدخول إلى غرفة الجلسة</h2>
