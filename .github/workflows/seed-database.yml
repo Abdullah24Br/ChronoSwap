@@ -1,0 +1,35 @@
+# One-off: create the tables and the initial data on the hosted database (Neon).
+# Runs on GitHub's servers because some networks block PostgreSQL's port 5432 from home machines.
+# Needs repository secrets DATABASE_URL and SEED_ADMIN_PASSWORD. Safe to run again (idempotent).
+name: Seed database
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+    steps:
+      - name: Check secrets
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$SEED_ADMIN_PASSWORD" ]; then
+            echo "::error::Add the DATABASE_URL and SEED_ADMIN_PASSWORD repository secrets first."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations (tables + hand-written constraints)
+        run: npx prisma migrate deploy
+      - name: Seed admin, skills and demo users
+        run: npm run db:seed

@@ -49,24 +49,21 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 4. اضغط **Deploy**. أثناء البناء تُنشأ الجداول والقيود تلقائياً.
 5. بعد النجاح انسخ رابط الموقع (مثل `https://chronoswap-xxxx.vercel.app`)، وضعه في `APP_URL` من **Settings → Environment Variables**، ثم **Deployments → … → Redeploy**.
 
-## 4. البيانات الأولية (مرة واحدة)
+## 4. أسرار GitHub
 
-من جهازك، في نافذة PowerShell جديدة داخل مجلد المشروع (المتغيرات تبقى في هذه النافذة فقط):
+في GitHub افتح المستودع ← **Settings → Secrets and variables → Actions → New repository secret**، وأضف أربعة أسرار:
 
-```powershell
-$env:DATABASE_URL = "رابط Neon"
-$env:SEED_ADMIN_PASSWORD = "كلمة سر المدير"
-npm run db:seed
-```
+| السر | القيمة |
+|---|---|
+| `DATABASE_URL` | رابط Neon (نفس قيمة Vercel) |
+| `SEED_ADMIN_PASSWORD` | كلمة سر المدير من الخطوة 2 |
+| `APP_URL` | رابط الموقع من الخطوة 3 |
+| `CRON_SECRET` | نفس قيمة Vercel |
 
-ثم أغلق النافذة. هذا ينشئ المدير و15 مهارة والمستخدمين التجريبيين الثلاثة (سارة، عمر، ليلى) بحلقة مقايضة جاهزة.
+## 5. البيانات الأولية والمهام المجدولة
 
-## 5. المهام المجدولة على GitHub
-
-1. في GitHub افتح المستودع ← **Settings → Secrets and variables → Actions → New repository secret**، وأضف:
-   - `APP_URL`: رابط الموقع من الخطوة 3
-   - `CRON_SECRET`: نفس قيمة Vercel
-2. افتح تبويب **Actions** ← **Scheduled jobs** ← **Run workflow** للتجربة. إذا نجح، فسيعمل وحده كل 5 دقائق تقريباً.
+1. تبويب **Actions** ← **Seed database** ← **Run workflow** (مرة واحدة). ينشئ الجداول والمدير و15 مهارة والمستخدمين التجريبيين الثلاثة (سارة، عمر، ليلى) بحلقة مقايضة جاهزة. يعمل على خوادم GitHub لأن بعض الشبكات المنزلية تحجب منفذ PostgreSQL (5432)، ويمكن إعادة تشغيله بأمان.
+2. ثم **Actions** ← **Scheduled jobs** ← **Run workflow** للتجربة. إذا نجح فسيعمل وحده كل 5 دقائق تقريباً.
 
 ملاحظة: يتأخر GitHub أحياناً بضع دقائق، فقد يُكتشف الغياب بعد 20 دقيقة بدل 15. هذا مقبول للعرض.
 
