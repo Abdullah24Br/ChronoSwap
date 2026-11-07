@@ -169,4 +169,29 @@ describe("A direct session from request to archive (end to end)", () => {
       "RELEASED",
     ]);
   });
+
+  it("refuses a request that starts less than 2 hours from now (Q-11)", async () => {
+    const unique = randomUUID();
+    const category = await db.skillCategory.create({
+      data: { slug: `soon-cat-${unique}`, nameAr: `تصنيف ${unique.slice(0, 6)}` },
+    });
+    const skill = await db.skill.create({
+      data: { categoryId: category.id, slug: `soon-${unique}`, nameAr: "إنجليزية" },
+    });
+    const learner = await makeUser("soon-learner");
+    const teacher = await makeUser("soon-teacher");
+    await db.userSkill.create({ data: { userId: teacher.id, skillId: skill.id, kind: "OFFERED" } });
+    await grantWelcomeBonus(db, learner.id);
+
+    await expect(
+      requestSession(learner.id, {
+        teacherId: teacher.id,
+        skillId: skill.id,
+        startAt: new Date(Date.now() + 60 * MINUTE),
+        durationMinutes: 30,
+        goal: "جلسة بعد ساعة واحدة فقط",
+      }),
+    ).rejects.toMatchObject({ code: "TOO_SOON" });
+    expect((await wallet(learner.id)).frozenMinutes).toBe(0);
+  });
 });

@@ -87,7 +87,7 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
       ],
     });
 
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
     const session = await requestSession(learner.id, {
       teacherId: teacher.id,
       skillId: skill.id,

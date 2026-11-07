@@ -301,7 +301,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
   it("processes automated 15-minute no-show: both absent -> NO_SHOW_BOTH and refund learner", async () => {
     const { learner, teacher, skill } = await createTestUsersAndSkill();
 
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours in future
+    const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours in future (Q-11 needs at least 2h)
     const session = await requestSession(learner.id, {
       teacherId: teacher.id,
       skillId: skill.id,
@@ -333,7 +333,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
   it("processes automated 15-minute no-show: teacher absent, learner joined -> NO_SHOW_TEACHER and refund learner", async () => {
     const { learner, teacher, skill } = await createTestUsersAndSkill();
 
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
     const session = await requestSession(learner.id, {
       teacherId: teacher.id,
       skillId: skill.id,
@@ -373,7 +373,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
   it("processes automated 15-minute no-show: learner absent, teacher joined -> NO_SHOW_LEARNER and pay teacher", async () => {
     const { learner, teacher, skill } = await createTestUsersAndSkill();
 
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
     const session = await requestSession(learner.id, {
       teacherId: teacher.id,
       skillId: skill.id,
@@ -413,7 +413,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
   it("transitions session to IN_PROGRESS when both participants join before grace window expires (FR-5.1:both-joined)", async () => {
     const { learner, teacher, skill } = await createTestUsersAndSkill();
 
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
     const session = await requestSession(learner.id, {
       teacherId: teacher.id,
       skillId: skill.id,

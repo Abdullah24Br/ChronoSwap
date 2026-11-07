@@ -12,6 +12,9 @@ export const WELCOME_BONUS_MINUTES = 120;
 export const SESSION_DURATIONS = [30, 60, 90, 120] as const;
 export type SessionDuration = (typeof SESSION_DURATIONS)[number];
 
+/** FR-4.1 / Q-11: a session must start at least this long after the request is sent. */
+export const MIN_BOOKING_NOTICE_MINUTES = 2 * 60;
+
 /** FR-4.6: cancelling an accepted session later than this counts as absence. */
 export const CANCELLATION_CUTOFF_MINUTES = 12 * 60;
 

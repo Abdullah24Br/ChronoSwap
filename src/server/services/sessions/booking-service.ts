@@ -1,5 +1,6 @@
 import type { PrismaClient, SessionStatus } from "@/generated/prisma/client";
 import {
+  MIN_BOOKING_NOTICE_MINUTES,
   SESSION_DURATIONS,
   WEEKLY_PAIR_CAP_MINUTES,
   type SessionDuration,
@@ -250,6 +251,13 @@ export async function requestSession(
   const now = new Date();
   if (startAt <= now) {
     throw new DomainError("PAST_START_TIME", "موعد الجلسة يجب أن يكون في المستقبل");
+  }
+  // Q-11: leave the teacher time to answer before the auto-reject at the start time (FR-4.2).
+  if (startAt.getTime() - now.getTime() < MIN_BOOKING_NOTICE_MINUTES * 60 * 1000) {
+    throw new DomainError(
+      "TOO_SOON",
+      `يجب أن يبدأ موعد الجلسة بعد ${MIN_BOOKING_NOTICE_MINUTES / 60} ساعة على الأقل من إرسال الطلب`,
+    );
   }
 
   const durationMinutes = input.durationMinutes;

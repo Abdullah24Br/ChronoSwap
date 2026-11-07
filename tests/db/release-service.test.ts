@@ -82,7 +82,7 @@ describe("48-Hour Escrow Auto-Release & Safe Fallback (Module 8: FR-8.4, FR-8.5)
       ],
     });
 
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
     const session = await requestSession(learner.id, {
       teacherId: teacher.id,
       skillId: skill.id,

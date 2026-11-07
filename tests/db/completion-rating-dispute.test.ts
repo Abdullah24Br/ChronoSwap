@@ -108,7 +108,7 @@ describe("Completion, Rating & Dispute System (Module 6: FR-6.1, FR-6.2, FR-6.4)
   }
 
   async function createInProgressSession(fixture: Awaited<ReturnType<typeof createTestFixture>>) {
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
     const session = await requestSession(fixture.learner.id, {
       teacherId: fixture.teacher.id,
       skillId: fixture.skill.id,

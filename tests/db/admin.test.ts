@@ -216,7 +216,7 @@ describe("Admin Panel & Platform Governance (Module 7: FR-7.1, FR-7.2, FR-7.3)",
   // ─────────────────────────────────────────────────────────────
 
   async function createDisputedSession(fixture: Awaited<ReturnType<typeof createAdminTestFixture>>) {
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
     const session = await requestSession(fixture.nonAdmin.id, {
       teacherId: fixture.teacher.id,
       skillId: fixture.skill.id,
