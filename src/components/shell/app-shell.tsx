@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { AuthNav, AuthNavSkeleton } from "./auth-nav";
+import { MotionLayer } from "@/components/motion/motion-layer";
 import { Logo } from "./logo";
 import { DesktopNav, MobileNav } from "./navigation";
 import { ThemeToggle } from "./theme";
@@ -32,7 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-8 md:px-6 md:pb-16">
-        {children}
+        <MotionLayer>{children}</MotionLayer>
       </main>
       <MobileNav />
     </>

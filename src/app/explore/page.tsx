@@ -46,7 +46,7 @@ export default async function ExplorePage(props: ExplorePageProps) {
         <div>
           <h1 className="text-2xl font-bold text-fg flex items-center gap-2.5">
             <Compass className="size-6 text-amber" />
-            <span>استكشاف المهارات والمقايضة الذكية (FR-3.1 / FR-3.2)</span>
+            <span>استكشاف المهارات والمقايضة الذكية</span>
           </h1>
           <p className="text-sm text-muted mt-1">
             ابحث عن مدرّسين لمختلف المهارات، أو اكتشف من يعرض ما تطلبه ويطلب ما تعرضه.

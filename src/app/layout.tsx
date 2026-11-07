@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Alexandria, IBM_Plex_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Reem_Kufi } from "next/font/google";
 import { AppShell } from "@/components/shell/app-shell";
 import { THEME_INIT_SCRIPT } from "@/components/shell/theme";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
-// Headings: Alexandria (geometric, distinctive Arabic display face).
-const display = Alexandria({ variable: "--font-alexandria", subsets: ["arabic", "latin"], display: "swap" });
+// Headings: Reem Kufi — geometric Kufic, the script engraved on astrolabes. Display sizes only.
+const display = Reem_Kufi({ variable: "--font-reem-kufi", subsets: ["arabic", "latin"], display: "swap" });
 // Body: IBM Plex Sans Arabic (very readable at small sizes).
 const body = IBM_Plex_Sans_Arabic({
   variable: "--font-plex-arabic",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07070A",
+  themeColor: "#0B1020",
   viewportFit: "cover",
 };
 

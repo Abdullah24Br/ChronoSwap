@@ -77,7 +77,7 @@ export default async function ProfilePage() {
       {/* Wallet Balance Header */}
       {wallet && (
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-fg">رصيد محفظتك الزمنية (FR-2.1)</h2>
+          <h2 className="text-base font-semibold text-fg">رصيد محفظتك الزمنية</h2>
           <WalletSummary
             availableMinutes={wallet.availableMinutes}
             frozenMinutes={wallet.frozenMinutes}
@@ -89,7 +89,7 @@ export default async function ProfilePage() {
       {/* FR-1.3: Skills Matrix Section */}
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-bold text-fg">مصفوفة المهارات (FR-1.3)</h2>
+          <h2 className="text-lg font-bold text-fg">مصفوفة المهارات</h2>
           <p className="text-sm text-muted">
             حدّد المهارات التي تتقنها وتستطيع تدريسها، والمهارات التي ترغب بتعلّمها ليتم ترشيحك في المقايضة الذكية والبحث.
           </p>
@@ -105,7 +105,7 @@ export default async function ProfilePage() {
       {/* FR-1.4: Availability Slots Section */}
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-bold text-fg">الأوقات المتاحة أسبوعياً (FR-1.4)</h2>
+          <h2 className="text-lg font-bold text-fg">الأوقات المتاحة أسبوعياً</h2>
           <p className="text-sm text-muted">
             حدّد ساعات وفترات توفرك خلال أيام الأسبوع ليتمكن المتعلمون من حجز المواعيد معك وفق منطقتك الزمنية.
           </p>

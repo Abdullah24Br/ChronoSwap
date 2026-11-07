@@ -182,7 +182,7 @@ export default function DesignPage() {
         <Card>
           <CardHeader>
             <CardTitle>سجل الحركات</CardTitle>
-            <CardDescription>سجلّ لا يُعدَّل ولا يُحذف (NFR-2)</CardDescription>
+            <CardDescription>سجلّ لا يُعدَّل ولا يُحذف</CardDescription>
           </CardHeader>
           <ul className="divide-y divide-line px-5 pb-2 pt-3">
             {ledgerSample.map((row) => (

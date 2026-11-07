@@ -40,7 +40,7 @@ export default async function AdminLayout({
             </div>
             <h2 className="text-xl font-bold text-fg">غير مصرح بالدخول</h2>
             <p className="text-xs text-muted leading-relaxed">
-              عذراً، هذه المنطقة مخصصة فقط لمديري نظام ChronoSwap (FR-7.x). لا تملك الصلاحية للوصول إليها.
+              عذراً، هذه المنطقة مخصصة فقط لمديري نظام ChronoSwap. لا تملك الصلاحية للوصول إليها.
             </p>
             <div className="pt-2">
               <Link
@@ -81,21 +81,21 @@ export default async function AdminLayout({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors border border-line bg-surface hover:bg-raised text-fg"
           >
             <LayoutDashboard className="size-3.5 text-amber" />
-            <span>المؤشرات العامة (FR-7.3)</span>
+            <span>المؤشرات العامة</span>
           </Link>
           <Link
             href="/admin/skills"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors border border-line bg-surface hover:bg-raised text-fg"
           >
             <BookOpen className="size-3.5 text-cyan-ink" />
-            <span>المهارات والتصنيفات (FR-7.1)</span>
+            <span>المهارات والتصنيفات</span>
           </Link>
           <Link
             href="/admin/disputes"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors border border-line bg-surface hover:bg-raised text-fg"
           >
             <Scale className="size-3.5 text-danger" />
-            <span>قضايا النزاع (FR-7.2)</span>
+            <span>قضايا النزاع</span>
           </Link>
         </nav>
       </div>

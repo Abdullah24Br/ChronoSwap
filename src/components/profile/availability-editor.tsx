@@ -173,7 +173,7 @@ export function AvailabilityEditor({ initialTimezone, initialSlots }: Availabili
           <div>
             <CardTitle className="text-lg flex items-center gap-2">
               <CalendarClock className="size-5 text-amber" />
-              <span>الأوقات المتاحة لاستقبال الجلسات (FR-1.4)</span>
+              <span>الأوقات المتاحة لاستقبال الجلسات</span>
             </CardTitle>
             <CardDescription>
               حدّد فتراتك المتاحة أسبوعياً لاستقبال طلبات المقايضة والتعليم

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { loginAction, resendVerificationAction } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { safeNextPath } from "@/lib/safe-redirect";
 import { Lock, Mail, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -57,15 +56,13 @@ export default function LoginPage() {
   };
 
   return (
-    <Card accent="cyan" className="shadow-lg">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
-        <CardDescription>
-          أدخل بيانات حسابك للمتابعة إلى منصة ChronoSwap
-        </CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+    <div className="flex flex-col gap-8">
+      <header className="space-y-2">
+        <h1 className="text-4xl leading-tight md:text-5xl">أهلاً بعودتك</h1>
+        <p className="text-muted">سجّل الدخول لتتابع جلساتك ورصيدك.</p>
+      </header>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <div className="space-y-4">
           {formError && (
             <div className="flex items-start gap-2 rounded-lg border border-danger/40 bg-danger-soft p-3 text-sm text-danger">
               <AlertCircle className="size-5 shrink-0 mt-0.5" />
@@ -122,8 +119,8 @@ export default function LoginPage() {
             required
             autoComplete="current-password"
           />
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
+        </div>
+        <div className="flex flex-col gap-4">
           <Button
             type="submit"
             variant="accent"
@@ -133,14 +130,14 @@ export default function LoginPage() {
           >
             دخول
           </Button>
-          <div className="text-center text-sm text-muted">
+          <p className="text-sm text-muted">
             ليس لديك حساب؟{" "}
-            <Link href="/register" className="text-cyan-ink hover:underline font-medium">
-              إنشاء حساب جديد
+            <Link href="/register" className="font-medium text-cyan-ink underline-offset-4 hover:underline">
+              أنشئ حساباً
             </Link>
-          </div>
-        </CardFooter>
+          </p>
+        </div>
       </form>
-    </Card>
+    </div>
   );
 }

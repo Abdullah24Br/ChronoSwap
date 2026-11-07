@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { registerAction } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Mail, Lock, User } from "lucide-react";
 
@@ -41,15 +40,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <Card accent="amber" className="shadow-lg">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">إنشاء حساب جديد</CardTitle>
-        <CardDescription>
-          انضم إلى ChronoSwap وابدأ بتبادل المعرفة بنظام بنك الوقت
-        </CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+    <div className="flex flex-col gap-8">
+      <header className="space-y-2">
+        <h1 className="text-4xl leading-tight md:text-5xl">افتح محفظة وقتك</h1>
+        <p className="text-muted">حساب واحد تعلّم فيه ما تتقنه، وتتعلّم به ما تريده.</p>
+      </header>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <div className="space-y-4">
           {formError && (
             <div className="rounded-lg border border-danger/40 bg-danger-soft p-3 text-sm text-danger">
               {formError}
@@ -97,11 +94,11 @@ export default function RegisterPage() {
             autoComplete="new-password"
           />
 
-          <div className="rounded-lg border border-line bg-raised/50 p-3 text-xs text-muted">
-            <span className="font-semibold text-fg">هدية انضمام:</span> ستحصل على ساعتين رصيد ترحيبي مجاني فور تأكيد بريدك الإلكتروني.
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
+          <p className="rounded-xl border border-amber/25 bg-amber-soft px-4 py-3 text-sm text-fg">
+            تبدأ بساعتين في رصيدك فور إنشاء الحساب، لتحجز بهما جلستك الأولى.
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
           <Button
             type="submit"
             variant="primary"
@@ -111,14 +108,14 @@ export default function RegisterPage() {
           >
             إنشاء الحساب
           </Button>
-          <div className="text-center text-sm text-muted">
-            لديك حساب مسبقاً؟{" "}
-            <Link href="/login" className="text-amber-ink hover:underline font-medium">
-              تسجيل الدخول
+          <p className="text-sm text-muted">
+            لديك حساب؟{" "}
+            <Link href="/login" className="font-medium text-amber-ink underline-offset-4 hover:underline">
+              سجّل الدخول
             </Link>
-          </div>
-        </CardFooter>
+          </p>
+        </div>
       </form>
-    </Card>
+    </div>
   );
 }

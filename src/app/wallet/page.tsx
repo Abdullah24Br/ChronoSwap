@@ -5,6 +5,7 @@ import { getWalletDashboard } from "@/server/services/wallet/wallet-service";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TimeAmount } from "@/components/ui/time-amount";
+import { TimeGauge } from "@/components/wallet/time-gauge";
 import { LedgerHistory } from "@/components/wallet/ledger-history";
 import { WalletSummary } from "@/components/wallet/wallet-summary";
 import {
@@ -36,12 +37,13 @@ export default async function WalletPage() {
       {/* Wallet Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-fg flex items-center gap-2.5">
-            <Wallet className="size-6 text-amber" />
-            <span>محفظة الوقت (FR-2.1)</span>
+          {/* FR-2.1 wallet dashboard */}
+          <h1 className="flex items-center gap-2.5 text-3xl text-fg md:text-4xl">
+            <Wallet className="size-7 text-amber" />
+            <span>محفظتك</span>
           </h1>
-          <p className="text-sm text-muted mt-1">
-            رصيدك من ساعات التعلم والتعليم وسجل كافة الحركات الموثقة بدفتر الأستاذ غير القابل للتعديل (NFR-2).
+          <p className="mt-1 text-sm text-muted">
+            ساعاتك المتاحة والمجمّدة، وكل حركة عليها مسجّلة في دفتر لا يُعدَّل.
           </p>
         </div>
 
@@ -55,12 +57,17 @@ export default async function WalletPage() {
         </div>
       </div>
 
-      {/* Main Wallet Summary Card (FR-2.1) */}
-      <WalletSummary
-        availableMinutes={wallet.availableMinutes}
-        frozenMinutes={wallet.frozenMinutes}
-        debtMinutes={wallet.debtMinutes}
-      />
+      {/* FR-2.1: the gauge (available vs frozen) next to the exact balances */}
+      <div className="grid items-center gap-6 md:grid-cols-[minmax(0,17rem)_1fr]">
+        <div data-reveal className="mx-auto aspect-square w-full max-w-[17rem]">
+          <TimeGauge availableMinutes={wallet.availableMinutes} frozenMinutes={wallet.frozenMinutes} />
+        </div>
+        <WalletSummary
+          availableMinutes={wallet.availableMinutes}
+          frozenMinutes={wallet.frozenMinutes}
+          debtMinutes={wallet.debtMinutes}
+        />
+      </div>
 
       {/* Lifetime Stats & Escrow Guarantee Note */}
       <div className="grid gap-4 sm:grid-cols-3">

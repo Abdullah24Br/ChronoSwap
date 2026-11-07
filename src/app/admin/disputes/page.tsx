@@ -20,7 +20,7 @@ export default async function AdminDisputesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-fg">قضايا النزاع والتحكيم الإداري (FR-7.2)</h2>
+        <h2 className="text-lg font-bold text-fg">قضايا النزاع والتحكيم الإداري</h2>
         <p className="text-xs text-muted">
           مراجعة الجلسات المعترض عليها والجلسات المحالة تلقائياً لقلة الإنجاز، مع استعراض الأدلة والفصل المالي فيها.
         </p>

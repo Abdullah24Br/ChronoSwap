@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { gsap } from "@/components/motion/gsap";
+import { CountdownRing } from "./countdown-ring";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -281,13 +283,6 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
     });
   };
 
-  const formatTimer = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  };
-
   // ─────────────────────────────────────────────────────────────
   // Meeting URL update (FR-5.2)
   // ─────────────────────────────────────────────────────────────
@@ -358,6 +353,15 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
         agendaTasks: updatedTasks,
         completionPercent,
       };
+    });
+
+    // FR-5.4: the tick answers the click with a little brass pop.
+    requestAnimationFrame(() => {
+      gsap.fromTo(
+        `[data-task="${taskId}"] svg`,
+        { scale: 0.3, rotate: -45 },
+        { scale: 1, rotate: 0, duration: 0.6, ease: "elastic.out(1, 0.45)" },
+      );
     });
 
     startTransition(async () => {
@@ -460,15 +464,11 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
         {/* Status / Timer Pill */}
         <div className="flex items-center gap-3">
           {!isEnded ? (
-            <div className="flex items-center gap-2.5 rounded-xl border border-success/30 bg-success/10 px-4 py-2 text-success">
-              <Clock className="size-4 animate-spin" style={{ animationDuration: "8s" }} />
-              <div className="text-xs">
-                <span className="text-[0.65rem] text-success/80 block">الوقت المتبقي للجلسة</span>
-                <span className="font-mono font-bold text-sm tracking-wider">
-                  {formatTimer(timeLeftMs)}
-                </span>
-              </div>
-            </div>
+            <CountdownRing
+              timeLeftMs={timeLeftMs}
+              durationMinutes={session.durationMinutes}
+              label={isRunning ? "الوقت المتبقي للجلسة" : "حتى نهاية الموعد"}
+            />
           ) : (
             <div className="flex items-center gap-2 rounded-xl border border-line bg-raised px-4 py-2 text-xs text-muted">
               <CheckCircle2 className="size-4 text-success" />
@@ -495,7 +495,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
             </div>
             <div>
               <strong className="text-fg block font-bold">
-                الاختبار التقييمي متاح الآن لقياس الاستيعاب (FR-8.3)
+                الاختبار التقييمي متاح الآن لقياس الاستيعاب
               </strong>
               <span className="text-muted text-[0.75rem]">
                 يُرجى الإجابة عن الأسئلة الثلاثة لتوثيق دليل التعلّم وتأكيد تحرير رصيد الجلسة للمدرّس (مهلة 48 ساعة).
@@ -651,7 +651,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                     }`}
                   >
                     <Award className="size-3.5 text-amber" />
-                    <span>اختبار الفهم (FR-8.3)</span>
+                    <span>اختبار الفهم</span>
                     {session.quiz?.attempt || quizSubmitted ? (
                       <span className="size-1.5 rounded-full bg-success" />
                     ) : session.quiz ? (
@@ -753,7 +753,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                       <div className="p-4 rounded-xl border border-amber/30 bg-amber/5 space-y-2">
                         <div className="flex items-center gap-2 text-xs font-bold text-amber">
                           <Sparkles className="size-4" />
-                          <span>الملخص الذكي للجلسة التعليمية (FR-8.2)</span>
+                          <span>الملخص الذكي للجلسة التعليمية</span>
                         </div>
                         <p className="text-xs text-fg leading-relaxed whitespace-pre-wrap">
                           {session.aiSummary.summary}
@@ -825,7 +825,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                       <div className="flex size-10 items-center justify-center rounded-xl bg-amber/10 text-amber mx-auto">
                         <AlertCircle className="size-5" />
                       </div>
-                      <h4 className="text-xs font-bold text-fg">خطة البديل الآمن (FR-8.5)</h4>
+                      <h4 className="text-xs font-bold text-fg">خطة البديل الآمن</h4>
                       <p className="text-[0.75rem] text-muted max-w-md mx-auto leading-relaxed">
                         تعذر توليد الملخص التلقائي عبر الذكاء الاصطناعي — تم حفظ ملاحظات وأكواد الجلسة الأصلية في أرشيفك الدائم، وسيتم تحرير الساعات للمدرّس تلقائياً بعد 48 ساعة وفق المتطلب FR-8.5.
                       </p>
@@ -882,7 +882,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                         <div>
                           <h4 className="text-sm font-bold text-fg flex items-center gap-2">
                             <Award className="size-4 text-amber" />
-                            <span>اختبار قياس الاستيعاب ودليل التعلّم (FR-8.3)</span>
+                            <span>اختبار قياس الاستيعاب ودليل التعلّم</span>
                           </h4>
                           <p className="text-xs text-muted mt-1 leading-relaxed">
                             {session.quiz.attempt || quizSubmitted
@@ -916,7 +916,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                         <div className="p-4 rounded-xl border border-amber/30 bg-amber/5 text-xs text-amber space-y-1">
                           <div className="font-bold flex items-center gap-1.5">
                             <Clock className="size-3.5" />
-                            <span>بانتظار حل الاختبار من قبل المتعلم (FR-8.3 / FR-8.4)</span>
+                            <span>بانتظار حل الاختبار من قبل المتعلم</span>
                           </div>
                           <p className="text-[0.75rem] text-muted leading-relaxed">
                             تُحرر الساعات فور حل المتعلم للاختبار، أو تلقائياً بعد انقضاء 48 ساعة من انتهاء الجلسة وفق المتطلب FR-8.4 ما لم يُقدَّم اعتراض.
@@ -932,7 +932,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                             <span>تم تحرير رصيد الساعات بنجاح</span>
                           </div>
                           <p className="text-[0.75rem] text-muted leading-relaxed">
-                            تم تحرير {session.durationMinutes} دقيقة لصالح المدرّس ({session.teacher.displayName}) وسداد أي التزامات سابقة وفق قواعد النظام المالي (FR-2.3).
+                            تم تحرير {session.durationMinutes} دقيقة لصالح المدرّس ({session.teacher.displayName}) وسداد أي التزامات سابقة وفق قواعد النظام المالي.
                           </p>
                         </div>
                       )}
@@ -1077,7 +1077,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                             className="text-xs"
                             icon={<Award className="size-4" />}
                           >
-                            <span>تسليم الإجابات وإنهاء الاختبار (FR-8.3)</span>
+                            <span>تسليم الإجابات وإنهاء الاختبار</span>
                           </Button>
                         </div>
                       )}
@@ -1090,7 +1090,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                       <h4 className="text-xs font-bold text-fg">الاختبار غير متوفر حالياً</h4>
                       <p className="text-[0.75rem] text-muted max-w-md mx-auto leading-relaxed">
                         {session.aiSummary?.status === "FAILED"
-                          ? "تعذر توليد الاختبار التقييمي عبر الـ AI — سيتم اعتماد شرط مهام الأجندة وتحرير الساعات للمدرّس تلقائياً بعد 48 ساعة وفق خطة البديل الآمن (FR-8.5)."
+                          ? "تعذر توليد الاختبار التقييمي عبر الـ AI — سيتم اعتماد شرط مهام الأجندة وتحرير الساعات للمدرّس تلقائياً بعد 48 ساعة وفق خطة البديل الآمن."
                           : "سيتم توليد الاختبار التقييمي آلياً فور انتهاء الجلسة بعد تأشير المهام المنجزة."}
                       </p>
                     </div>
@@ -1137,6 +1137,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                 session.agendaTasks.map((task) => (
                   <div
                     key={task.id}
+                    data-task={task.id}
                     onClick={() => handleToggleTask(task.id)}
                     className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
                       task.isDone
@@ -1271,7 +1272,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
               <div className="flex items-center justify-between">
                 <h5 className="font-bold text-fg flex items-center gap-1.5">
                   <Star className="size-4 text-amber fill-amber" />
-                  <span>تقييم تجربة المدرّس (FR-6.2)</span>
+                  <span>تقييم تجربة المدرّس</span>
                 </h5>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -1328,7 +1329,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 font-bold text-fg">
                   <Flag className="size-3.5 text-muted" />
-                  <span>هل واجهت مشكلة؟ (FR-6.4)</span>
+                  <span>هل واجهت مشكلة؟</span>
                 </div>
                 {!showDisputeForm && (
                   <Button

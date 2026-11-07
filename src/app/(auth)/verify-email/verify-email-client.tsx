@@ -85,7 +85,7 @@ export function VerifyEmailClient({ initialToken }: { initialToken?: string }) {
           <div className="rounded-xl border border-line bg-raised p-4 text-start">
             <div className="flex items-center gap-2 font-medium text-amber-ink mb-1">
               <Sparkles className="size-5 shrink-0" />
-              <span>تمت إضافة الرصيد الترحيبي (FR-1.2)</span>
+              <span>تمت إضافة الرصيد الترحيبي</span>
             </div>
             <p className="text-sm text-muted">
               حصلت على <strong>ساعتين (120 دقيقة)</strong> في رصيدك المتاح. يمكنك الآن البحث عن المهارات وحجز جلساتك الأولى فوراً!

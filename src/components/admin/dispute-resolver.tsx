@@ -86,7 +86,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-fg">ملف التحكيم وفض النزاع (FR-7.2)</h1>
+              <h1 className="text-xl font-bold text-fg">ملف التحكيم وفض النزاع</h1>
               {isResolved ? (
                 <Badge tone="neutral">نزاع مفصول فيه</Badge>
               ) : (
@@ -147,7 +147,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
             <CardHeader className="border-b border-line px-5 py-3 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-fg">
                 <BookOpen className="size-4 text-amber" />
-                <span>أجندة الجلسة ونسبة الإنجاز (FR-5.4)</span>
+                <span>أجندة الجلسة ونسبة الإنجاز</span>
               </CardTitle>
               <span className="font-mono text-xs font-bold text-fg">
                 {completionPercent}% منجز ({doneTasksCount}/{tasksCount})
@@ -294,7 +294,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
             <CardHeader className="border-b border-line px-5 py-3.5 bg-raised/30">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-fg">
                 <Gavel className="size-4 text-amber" />
-                <span>قرار التحكيم الإداري (FR-7.2)</span>
+                <span>قرار التحكيم الإداري</span>
               </CardTitle>
             </CardHeader>
 
@@ -352,7 +352,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
                           إعادة الساعات للمتعلم (Refund Learner)
                         </strong>
                         <span className="text-[0.7rem] text-muted leading-relaxed">
-                          إلغاء حجز الضمان وإرجاع كامل الـ {session.durationMinutes} دقيقة إلى الرصيد المتاح للمتعلم (FR-2.4).
+                          إلغاء حجز الضمان وإرجاع كامل الـ {session.durationMinutes} دقيقة إلى الرصيد المتاح للمتعلم.
                         </span>
                       </div>
                     </label>
@@ -377,7 +377,7 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
                           تحويل الساعات للمدرّس (Pay Teacher)
                         </strong>
                         <span className="text-[0.7rem] text-muted leading-relaxed">
-                          تحرير الـ {session.durationMinutes} دقيقة لصالح المدرّس، مع تسديد أي ديون سابقة عليه أولاً (FR-2.3).
+                          تحرير الـ {session.durationMinutes} دقيقة لصالح المدرّس، مع تسديد أي ديون سابقة عليه أولاً.
                         </span>
                       </div>
                     </label>

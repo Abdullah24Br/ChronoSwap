@@ -42,7 +42,14 @@ export function TimeAmount({ minutes, size = "md", tone = "default", signed = fa
       aria-label={formatTimeAmount(minutes, { signed })}
     >
       {/* LTR isolate keeps "−1.5" from being reordered by the RTL paragraph. */}
-      <bdi dir="ltr" className="cs-num font-medium leading-none tracking-tight">
+      <bdi
+        dir="ltr"
+        className="cs-num font-medium leading-none tracking-tight"
+        // Big balances count up when they first appear (src/components/motion/motion-layer.tsx).
+        data-countup={size === "lg" || size === "xl" ? "" : undefined}
+        data-minutes={minutes}
+        data-signed={signed ? "true" : undefined}
+      >
         {signPrefix(minutes, signed)}
         {formatHoursNumber(minutes)}
       </bdi>

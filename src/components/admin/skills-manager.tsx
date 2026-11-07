@@ -185,7 +185,7 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
         <div>
           <h2 className="text-lg font-bold text-fg">شجرة المهارات والتصنيفات المعتمدة</h2>
           <p className="text-xs text-muted">
-            إدارة التصنيفات والمهارات التي يمكن للمستخدمين عرضها أو طلبها في الموقع (FR-7.1).
+            إدارة التصنيفات والمهارات التي يمكن للمستخدمين عرضها أو طلبها في الموقع.
           </p>
         </div>
         <Button

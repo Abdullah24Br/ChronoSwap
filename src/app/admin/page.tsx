@@ -33,7 +33,7 @@ export default async function AdminStatsPage() {
             </div>
           </div>
           <div className="mt-3">
-            <h3 className="font-mono text-2xl font-bold text-fg">{stats.totalUsers}</h3>
+            <h3 className="font-mono text-2xl font-bold text-fg"><span data-count>{stats.totalUsers}</span></h3>
             <p className="text-[0.7rem] text-muted mt-0.5">مستخدم مسجل في المنصة</p>
           </div>
         </Card>
@@ -41,14 +41,14 @@ export default async function AdminStatsPage() {
         {/* Exchanged Hours */}
         <Card className="border-line p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted">الساعات المتبادلة (FR-7.3)</span>
+            <span className="text-xs text-muted">الساعات المتبادلة</span>
             <div className="flex size-8 items-center justify-center rounded-lg bg-success/10 text-success">
               <Clock className="size-4" />
             </div>
           </div>
           <div className="mt-3">
             <h3 className="font-mono text-2xl font-bold text-fg">
-              {stats.totalExchangedHours}{" "}
+              <span data-count>{stats.totalExchangedHours}</span>{" "}
               <span className="text-sm font-sans font-normal text-muted">ساعة</span>
             </h3>
             <p className="text-[0.7rem] text-muted mt-0.5">
@@ -67,7 +67,7 @@ export default async function AdminStatsPage() {
           </div>
           <div className="mt-3">
             <h3 className="font-mono text-2xl font-bold text-fg">
-              {stats.completedSessionsCount}{" "}
+              <span data-count>{stats.completedSessionsCount}</span>{" "}
               <span className="text-xs font-sans font-normal text-muted">
                 / {stats.totalSessions} إجمالي
               </span>
@@ -103,7 +103,7 @@ export default async function AdminStatsPage() {
                   stats.openDisputesCount > 0 ? "text-danger" : "text-fg"
                 }`}
               >
-                {stats.openDisputesCount}
+                <span data-count>{stats.openDisputesCount}</span>
               </h3>
               <p className="text-[0.7rem] text-muted mt-0.5">
                 {stats.resolvedDisputesCount} نزاع تم الفصل فيه
@@ -130,7 +130,7 @@ export default async function AdminStatsPage() {
             <CardHeader className="border-b border-line px-5 py-3.5 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-fg">
                 <TrendingUp className="size-4 text-amber" />
-                <span>أكثر المهارات طلباً (FR-7.3)</span>
+                <span>أكثر المهارات طلباً</span>
               </CardTitle>
               <Link
                 href="/admin/skills"
@@ -176,7 +176,7 @@ export default async function AdminStatsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Repeat className="size-4 text-cyan-ink" />
-                <h5 className="font-bold text-xs text-fg">محرك المقايضة الحلقية (FR-3.3)</h5>
+                <h5 className="font-bold text-xs text-fg">محرك المقايضة الحلقية</h5>
               </div>
               <span className="font-mono text-xs font-bold text-fg">
                 {stats.barterCyclesCount} حلقة

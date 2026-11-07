@@ -18,6 +18,7 @@ import { formatDateTime } from "@/lib/time";
 import { proposeBarterCycleAction, respondBarterProposalAction } from "@/server/actions/barter";
 import type { BarterOverview, BarterOverviewCycle } from "@/server/services/barter/barter-overview";
 import type { ThreeWayCycleMatch } from "@/server/services/barter/barter-service";
+import { CycleCanvas } from "./cycle-canvas";
 
 interface BarterHubProps {
   timezone: string;
@@ -145,6 +146,7 @@ function SuggestionCard({ suggestion, disabled }: { suggestion: ThreeWayCycleMat
   return (
     <Card accent="split">
       <CardContent className="space-y-4 p-5">
+        <CycleCanvas names={["أنت", b.displayName, c.displayName]} meIndex={0} className="mx-auto max-w-xs" />
         <ol className="space-y-2.5 text-sm">
           <Leg teacher="أنت" learner={b.displayName} skill={me.teachesSkill.nameAr} tone="amber" />
           <Leg teacher={b.displayName} learner={c.displayName} skill={b.teachesSkill.nameAr} />
@@ -259,6 +261,13 @@ function MyCycleCard({ cycle, timezone }: { cycle: BarterOverviewCycle; timezone
           </span>
         </div>
 
+        {(cycle.status === "PROPOSED" || cycle.status === "ACTIVE") && (
+          <CycleCanvas
+            names={cycle.participants.map((p) => (p.isMe ? "أنت" : p.displayName)) as [string, string, string]}
+            meIndex={cycle.participants.findIndex((p) => p.isMe)}
+            className="mx-auto max-w-xs"
+          />
+        )}
         <ol className="space-y-2.5 text-sm">
           {cycle.legs.map((leg) => {
             const iTeach = leg.teacher.id === myId;

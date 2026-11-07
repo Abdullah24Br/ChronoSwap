@@ -107,7 +107,7 @@ export function ExploreSearch({
           }`}
         >
           <Compass className="size-4 text-amber" />
-          <span>كافة المدرّسين (FR-3.1)</span>
+          <span>كافة المدرّسين</span>
           <span className="rounded-full bg-surface px-2 py-0.5 text-xs text-subtle font-mono">
             {initialTotal}
           </span>
@@ -123,7 +123,7 @@ export function ExploreSearch({
           }`}
         >
           <ArrowLeftRight className="size-4 text-cyan-ink" />
-          <span>المقايضة المباشرة (FR-3.2)</span>
+          <span>المقايضة المباشرة</span>
           {directMatches.length > 0 && (
             <span className="rounded-full bg-cyan-soft text-cyan-ink px-2 py-0.5 text-xs font-bold">
               {directMatches.length}
@@ -170,7 +170,7 @@ export function ExploreSearch({
                   لتفعيل التطابق المباشر، يجب تحديد مهارة واحدة على الأقل تعرضها وأخرى تطلبها في ملفك الشخصي.
                 </p>
                 <ButtonLink href="/profile" size="md" variant="primary" className="mt-2">
-                  إدارة مصفوفة المهارات (FR-1.3)
+                  إدارة مصفوفة المهارات
                 </ButtonLink>
               </CardContent>
             </Card>

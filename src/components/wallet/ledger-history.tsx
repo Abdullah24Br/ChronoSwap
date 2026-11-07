@@ -56,7 +56,7 @@ export function LedgerHistory({ entries, userTimezone }: LedgerHistoryProps) {
         <div className="flex items-center gap-2">
           <History className="size-5 text-amber" />
           <div>
-            <CardTitle className="text-lg">سجل الحركات الزمنية (FR-2.1)</CardTitle>
+            <CardTitle className="text-lg">سجل الحركات الزمنية</CardTitle>
             <p className="text-xs text-muted">
               سجل مالي غير قابل للتعديل يوثق كل إضافة أو حجز أو تحرير للوقت بدقة الدقيقة
             </p>

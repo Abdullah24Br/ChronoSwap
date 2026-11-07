@@ -1,76 +1,62 @@
-import { ArrowLeft, ArrowLeftRight, CalendarCheck, GraduationCap } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { TimeAmount } from "@/components/ui/time-amount";
-import { WalletSummary } from "@/components/wallet/wallet-summary";
-
-const steps = [
-  {
-    icon: GraduationCap,
-    title: "علّم ما تتقنه",
-    body: "كل ساعة تدرّسها تُضاف إلى محفظتك كساعة متاحة.",
-    tone: "text-amber-ink",
-  },
-  {
-    icon: CalendarCheck,
-    title: "تعلّم ما تريده",
-    body: "احجز جلسة مع مدرّس، وتُجمَّد ساعاتك بأمان حتى تكتمل الجلسة.",
-    tone: "text-cyan-ink",
-  },
-  {
-    icon: ArrowLeftRight,
-    title: "أو قايض مباشرة",
-    body: "نجد لك حلقة تبادل ثلاثية: كل طرف يعطي بقدر ما يأخذ، دون رصيد مسبق.",
-    tone: "text-fg",
-  },
-];
+import { CycleCanvas } from "@/components/barter/cycle-canvas";
+import { AstrolabeHero } from "@/components/landing/astrolabe-hero";
+import { EscrowStory } from "@/components/landing/escrow-story";
+import { WELCOME_BONUS_MINUTES } from "@/lib/rules";
 
 export const instant = false;
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col gap-16 md:gap-24">
-      <section className="grid items-center gap-10 pt-4 md:grid-cols-[1.35fr_1fr] md:pt-10">
-        <div className="flex flex-col gap-6">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-line-strong px-3 py-1 text-xs text-muted">
-            <span className="size-1.5 rounded-full bg-amber" />
-            بنك الوقت للمهارات
-          </span>
-          <h1 className="text-4xl font-bold leading-[1.25] text-fg md:text-[2.75rem] md:leading-[1.3] lg:text-[3.15rem]">
-            الوقت هو <span className="text-amber-ink">العملة</span>.
-            <br />
-            والمعرفة هي <span className="text-cyan-ink">المقابل</span>.
-          </h1>
-          <p className="max-w-xl text-lg text-muted">
-            علّم ساعة، وتعلّم ساعة. ChronoSwap منصة لتبادل المهارات تُحتسب فيها كل دقيقة بدقة، وتُحفظ ساعاتك في محفظة
-            آمنة حتى يكتمل التعلّم فعلاً.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <ButtonLink href="/register" size="lg">
-              احصل على <TimeAmount minutes={120} size="md" className="text-on-amber" /> مجاناً
-            </ButtonLink>
-            <ButtonLink href="/design" variant="outline" size="lg" icon={<ArrowLeft className="size-4" />}>
-              نظام التصميم
-            </ButtonLink>
-          </div>
+    <div className="flex flex-col gap-10 md:gap-16">
+      <AstrolabeHero>
+        <h1 data-hero-line className="text-5xl leading-[1.2] text-fg sm:text-6xl lg:text-7xl lg:leading-[1.15]">
+          الوقت عملتك.
+        </h1>
+        <p data-hero-line className="max-w-[34rem] text-lg leading-8 text-muted">
+          علّم ما تتقنه بالساعة، وتعلّم بها ما تريده من غيرك. كل دقيقة محسوبة، ومحفوظة في محفظة آمنة حتى يكتمل
+          التعلّم.
+        </p>
+        <div data-hero-line className="flex flex-wrap items-center gap-3">
+          <ButtonLink href="/register" size="lg">
+            أنشئ حسابك واحصل على <TimeAmount minutes={WELCOME_BONUS_MINUTES} size="md" className="text-on-amber" />
+          </ButtonLink>
+          <ButtonLink href="/explore" variant="outline" size="lg">
+            تصفّح المهارات
+          </ButtonLink>
         </div>
-        <WalletSummary availableMinutes={150} frozenMinutes={90} debtMinutes={0} />
+      </AstrolabeHero>
+
+      <EscrowStory />
+
+      <section aria-labelledby="cycle-title" className="grid items-center gap-10 py-10 lg:grid-cols-[1fr_1.1fr]">
+        <div className="space-y-4">
+          <h2 id="cycle-title" className="text-3xl leading-snug md:text-5xl md:leading-tight">
+            بلا رصيد؟ قايض في حلقة
+          </h2>
+          <p className="max-w-[34rem] leading-8 text-muted">
+            إذا كانت سارة تعلّم عمر، وعمر يعلّم ليلى، وليلى تعلّم سارة، فكل واحد منهم يعطي بقدر ما يأخذ. نبحث لك
+            عن هذه الحلقات تلقائياً، وتبدأ حين يوافق الثلاثة على مدة واحدة.
+          </p>
+          <ButtonLink href="/barter" variant="outline">
+            ابحث عن حلقتك
+          </ButtonLink>
+        </div>
+        <div className="rounded-[1.75rem] border border-line bg-surface/60 p-6 md:p-10">
+          <CycleCanvas names={["سارة", "عمر", "ليلى"]} />
+        </div>
       </section>
 
-      <section className="flex flex-col gap-6">
-        <h2 className="text-2xl font-semibold">كيف تعمل المنصة؟</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          {steps.map(({ icon: Icon, title, body, tone }, i) => (
-            <Card key={title} className="flex flex-col gap-3 p-6">
-              <div className="flex items-center justify-between">
-                <Icon className={`size-6 ${tone}`} />
-                <span className="cs-num text-sm text-subtle">0{i + 1}</span>
-              </div>
-              <h3 className="text-lg font-semibold">{title}</h3>
-              <p className="text-sm text-muted">{body}</p>
-            </Card>
-          ))}
-        </div>
+      <section className="flex flex-col items-start gap-5 border-t border-line py-14 md:items-center md:text-center">
+        <h2 className="text-3xl leading-snug md:text-4xl">ساعتك الأولى علينا</h2>
+        <p className="max-w-[34rem] text-muted">
+          كل حساب جديد يبدأ بـ <TimeAmount minutes={WELCOME_BONUS_MINUTES} size="sm" tone="amber" /> لتحجز بها جلستك
+          الأولى اليوم.
+        </p>
+        <ButtonLink href="/register" size="lg">
+          أنشئ حسابك
+        </ButtonLink>
       </section>
     </div>
   );

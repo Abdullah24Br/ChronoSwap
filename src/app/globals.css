@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
-/* ChronoSwap design tokens — "time as currency".
- * Dark-first. Two accents = the two sides of an exchange:
- *   amber (#FFB547) → giving / teaching / spendable (available) time
- *   cyan  (#3DE0FF) → receiving / learning / escrowed (frozen) time
+/* ChronoSwap design tokens — "the astrolabe": time as currency, measured the way Arabic
+ * astronomers measured it. Night-sky ink, engraved brass, turquoise faience, parchment text.
+ * Dark-first. The two accents keep their meaning (utility names stay amber / cyan):
+ *   amber = brass     (#D4A24C) → giving / teaching / spendable (available) time
+ *   cyan  = turquoise (#35C9B8) → receiving / learning / escrowed (frozen) time
  * Always use the semantic utilities below (bg-surface, text-muted, text-amber-ink …),
  * never raw hex values or Tailwind's default palette, in components.
  */
@@ -13,59 +14,60 @@
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --cs-canvas: #07070a;
-  --cs-surface: #0d0d12;
-  --cs-raised: #14141b;
-  --cs-overlay: #1b1b24;
-  --cs-line: rgb(242 240 235 / 0.08);
-  --cs-line-strong: rgb(242 240 235 / 0.16);
-  --cs-fg: #f2f0eb;
-  --cs-muted: #a8a59e;
-  --cs-subtle: #6f6d68;
+  --cs-canvas: #0b1020;
+  --cs-surface: #10172c;
+  --cs-raised: #172039;
+  --cs-overlay: #1e2947;
+  --cs-line: rgb(236 228 210 / 0.08);
+  --cs-line-strong: rgb(236 228 210 / 0.17);
+  --cs-fg: #ece4d2;
+  --cs-muted: #a7adbf;
+  --cs-subtle: #6d7590;
 
-  --cs-amber: #ffb547;
-  --cs-amber-ink: #ffb547;
-  --cs-amber-soft: rgb(255 181 71 / 0.12);
-  --cs-cyan: #3de0ff;
-  --cs-cyan-ink: #3de0ff;
-  --cs-cyan-soft: rgb(61 224 255 / 0.11);
-  --cs-success: #5ad19a;
-  --cs-success-soft: rgb(90 209 154 / 0.12);
-  --cs-danger: #ff6b6b;
-  --cs-danger-soft: rgb(255 107 107 / 0.12);
+  --cs-amber: #d4a24c;
+  --cs-amber-ink: #e3b764;
+  --cs-amber-soft: rgb(212 162 76 / 0.14);
+  --cs-cyan: #35c9b8;
+  --cs-cyan-ink: #55d9c8;
+  --cs-cyan-soft: rgb(53 201 184 / 0.12);
+  --cs-success: #9ccb6b;
+  --cs-success-soft: rgb(156 203 107 / 0.13);
+  --cs-danger: #e8686c;
+  --cs-danger-soft: rgb(232 104 108 / 0.13);
 
-  --cs-glow-amber: rgb(255 181 71 / 0.10);
-  --cs-glow-cyan: rgb(61 224 255 / 0.07);
-  --cs-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px -12px rgb(0 0 0 / 0.6);
-  --cs-grain-opacity: 0.035;
+  --cs-glow-amber: rgb(212 162 76 / 0.11);
+  --cs-glow-cyan: rgb(53 201 184 / 0.08);
+  --cs-shadow: 0 1px 0 rgb(236 228 210 / 0.05) inset, 0 14px 34px -14px rgb(2 4 12 / 0.75);
+  --cs-grain-opacity: 0.04;
 }
 
 [data-theme="light"] {
+  /* Day sky over brass: pale blue-grey paper, ink text. */
   color-scheme: light;
-  --cs-canvas: #f2f0eb;
-  --cs-surface: #faf9f6;
+  --cs-canvas: #e7ebf2;
+  --cs-surface: #f3f5f9;
   --cs-raised: #ffffff;
   --cs-overlay: #ffffff;
-  --cs-line: rgb(7 7 10 / 0.09);
-  --cs-line-strong: rgb(7 7 10 / 0.18);
-  --cs-fg: #0b0b0f;
-  --cs-muted: #57554f;
-  --cs-subtle: #8a877f;
+  --cs-line: rgb(11 16 32 / 0.09);
+  --cs-line-strong: rgb(11 16 32 / 0.18);
+  --cs-fg: #0b1020;
+  --cs-muted: #48526a;
+  --cs-subtle: #7a8399;
 
-  --cs-amber: #ffb547;
-  --cs-amber-ink: #9a5800; /* amber as text needs more contrast on light */
-  --cs-amber-soft: rgb(255 181 71 / 0.2);
-  --cs-cyan: #3de0ff;
-  --cs-cyan-ink: #00728a;
-  --cs-cyan-soft: rgb(61 224 255 / 0.18);
-  --cs-success: #1d8a5a;
-  --cs-success-soft: rgb(29 138 90 / 0.12);
-  --cs-danger: #c93636;
-  --cs-danger-soft: rgb(201 54 54 / 0.1);
+  --cs-amber: #d4a24c;
+  --cs-amber-ink: #85570f; /* brass as text needs more contrast on light */
+  --cs-amber-soft: rgb(212 162 76 / 0.2);
+  --cs-cyan: #35c9b8;
+  --cs-cyan-ink: #0a6c62;
+  --cs-cyan-soft: rgb(53 201 184 / 0.18);
+  --cs-success: #3f7a22;
+  --cs-success-soft: rgb(63 122 34 / 0.12);
+  --cs-danger: #b8343a;
+  --cs-danger-soft: rgb(184 52 58 / 0.1);
 
-  --cs-glow-amber: rgb(255 181 71 / 0.18);
-  --cs-glow-cyan: rgb(61 224 255 / 0.14);
-  --cs-shadow: 0 1px 2px rgb(7 7 10 / 0.04), 0 12px 32px -16px rgb(7 7 10 / 0.18);
+  --cs-glow-amber: rgb(212 162 76 / 0.2);
+  --cs-glow-cyan: rgb(53 201 184 / 0.14);
+  --cs-shadow: 0 1px 2px rgb(11 16 32 / 0.05), 0 12px 32px -16px rgb(11 16 32 / 0.2);
   --cs-grain-opacity: 0.025;
 }
 
@@ -83,17 +85,17 @@
   --color-amber: var(--cs-amber);
   --color-amber-ink: var(--cs-amber-ink);
   --color-amber-soft: var(--cs-amber-soft);
-  --color-on-amber: #1a1206;
+  --color-on-amber: #1a1305;
   --color-cyan: var(--cs-cyan);
   --color-cyan-ink: var(--cs-cyan-ink);
   --color-cyan-soft: var(--cs-cyan-soft);
-  --color-on-cyan: #031a20;
+  --color-on-cyan: #04201c;
   --color-success: var(--cs-success);
   --color-success-soft: var(--cs-success-soft);
   --color-danger: var(--cs-danger);
   --color-danger-soft: var(--cs-danger-soft);
 
-  --font-display: var(--font-alexandria), var(--font-plex-arabic), system-ui, sans-serif;
+  --font-display: var(--font-reem-kufi), var(--font-plex-arabic), system-ui, sans-serif;
   --font-sans: var(--font-plex-arabic), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
@@ -131,13 +133,16 @@
     text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4 {
-    font-family: var(--font-display);
     line-height: 1.35;
     letter-spacing: 0; /* never letter-space Arabic: it breaks joined letters */
   }
+  /* Kufic display face for page and section titles only; small titles stay in Plex for legibility. */
+  h1, h2 {
+    font-family: var(--font-display);
+  }
   ::selection {
     background: var(--cs-amber);
-    color: #1a1206;
+    color: #1a1305;
   }
   :focus-visible {
     outline: 2px solid var(--cs-cyan);

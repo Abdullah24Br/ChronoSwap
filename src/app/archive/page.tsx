@@ -138,7 +138,7 @@ function ArchiveCard({ entry, timezone }: { entry: ArchiveEntry; timezone: strin
             </>
           ) : (
             <p className="rounded-lg border border-line bg-raised p-3 text-xs text-muted">
-              لم يتوفر ملخص ذكي لهذه الجلسة، فحُفظت ملاحظاتها وأكوادها الأصلية فقط (FR-8.5).
+              لم يتوفر ملخص ذكي لهذه الجلسة، فحُفظت ملاحظاتها وأكوادها الأصلية فقط.
             </p>
           )}
 

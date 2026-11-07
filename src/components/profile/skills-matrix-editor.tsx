@@ -267,7 +267,7 @@ export function SkillsMatrixEditor({
                 <span>اختر مهاراتك من القائمة المعتمدة</span>
               </CardTitle>
               <CardDescription>
-                لكل مهارة: انقر على «أعرضها» لتدريسها أو «أطلبها» لتعلمها (FR-1.3)
+                لكل مهارة: انقر على «أعرضها» لتدريسها أو «أطلبها» لتعلمها
               </CardDescription>
             </div>
             <div className="w-full sm:w-64">

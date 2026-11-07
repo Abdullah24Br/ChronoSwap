@@ -324,7 +324,7 @@ export function SessionBookingForm({
               </span>
               <span className="text-subtle">
                 {isBarter
-                  ? "كل طرف في الحلقة يعطي من الساعات بقدر ما يأخذ (FR-3.4)"
+                  ? "كل طرف في الحلقة يعطي من الساعات بقدر ما يأخذ"
                   : `سيتم تجميد ${durationMinutes} دقيقة حتى انتهاء الجلسة وتقييمها بنجاح`}
               </span>
             </div>

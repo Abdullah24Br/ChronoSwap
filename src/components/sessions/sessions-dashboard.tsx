@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { FULL_MOTION, REDUCED_MOTION, gsap, useGSAP } from "@/components/motion/gsap";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,6 +51,32 @@ export function SessionsDashboard({
 
   const [isPending, startTransition] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Tab switch: a brass bar glides to the chosen tab and the new list deals itself in.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLSpanElement>(null);
+  useGSAP(
+    () => {
+      const tabs = tabsRef.current;
+      const bar = barRef.current;
+      const active = tabs?.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`);
+      if (!tabs || !bar || !active) return;
+      const vars = { x: active.offsetLeft, width: active.offsetWidth, autoAlpha: 1 };
+      const mm = gsap.matchMedia();
+      mm.add(FULL_MOTION, () => {
+        gsap.to(bar, { ...vars, duration: 0.6, ease: "astro" });
+        gsap.fromTo(
+          "[data-tab-content] .rounded-card",
+          { autoAlpha: 0, y: 34, rotateX: -12, transformPerspective: 900, transformOrigin: "50% 0%" },
+          { autoAlpha: 1, y: 0, rotateX: 0, duration: 0.75, ease: "astro", stagger: 0.07, clearProps: "all" },
+        );
+      });
+      mm.add(REDUCED_MOTION, () => gsap.set(bar, vars));
+      return () => mm.revert();
+    },
+    { scope: rootRef, dependencies: [activeTab] },
+  );
   const [meetingUrlInputs, setMeetingUrlInputs] = useState<Record<string, string>>({});
   const [rejectReasonInputs, setRejectReasonInputs] = useState<Record<string, string>>({});
   const [cancelReasonInputs, setCancelReasonInputs] = useState<Record<string, string>>({});
@@ -130,7 +157,7 @@ export function SessionsDashboard({
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={rootRef} data-tab-content data-motion="off" className="space-y-6">
       {/* Global Action Error Alert */}
       {actionError && (
         <div className="flex items-center gap-2.5 rounded-xl border border-danger/30 bg-danger/10 p-3.5 text-xs text-danger">
@@ -140,13 +167,21 @@ export function SessionsDashboard({
       )}
 
       {/* Tabs Bar */}
-      <div className="flex border-b border-line gap-2 overflow-x-auto pb-px">
+      <div ref={tabsRef} className="relative flex gap-2 overflow-x-auto border-b border-line pb-px">
+        <span
+          ref={barRef}
+          aria-hidden
+          className="invisible absolute bottom-0 h-0.5 rounded-full bg-amber shadow-[0_0_10px_var(--cs-amber)]"
+          // Physical left on purpose: GSAP sets x from offsetLeft (works in RTL and LTR).
+          style={{ left: 0 }}
+        />
         <button
           type="button"
+          data-tab="incoming"
           onClick={() => { setActiveTab("incoming"); setActionError(null); }}
           className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "incoming"
-              ? "border-amber text-amber-ink bg-amber/5"
+              ? "border-transparent text-amber-ink bg-amber/5"
               : "border-transparent text-muted hover:text-fg hover:border-line-strong"
           }`}
         >
@@ -161,10 +196,11 @@ export function SessionsDashboard({
 
         <button
           type="button"
+          data-tab="outgoing"
           onClick={() => { setActiveTab("outgoing"); setActionError(null); }}
           className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "outgoing"
-              ? "border-amber text-amber-ink bg-amber/5"
+              ? "border-transparent text-amber-ink bg-amber/5"
               : "border-transparent text-muted hover:text-fg hover:border-line-strong"
           }`}
         >
@@ -179,10 +215,11 @@ export function SessionsDashboard({
 
         <button
           type="button"
+          data-tab="upcoming"
           onClick={() => { setActiveTab("upcoming"); setActionError(null); }}
           className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "upcoming"
-              ? "border-amber text-amber-ink bg-amber/5"
+              ? "border-transparent text-amber-ink bg-amber/5"
               : "border-transparent text-muted hover:text-fg hover:border-line-strong"
           }`}
         >
@@ -197,10 +234,11 @@ export function SessionsDashboard({
 
         <button
           type="button"
+          data-tab="past"
           onClick={() => { setActiveTab("past"); setActionError(null); }}
           className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "past"
-              ? "border-amber text-amber-ink bg-amber/5"
+              ? "border-transparent text-amber-ink bg-amber/5"
               : "border-transparent text-muted hover:text-fg hover:border-line-strong"
           }`}
         >
@@ -570,9 +608,9 @@ export function SessionsDashboard({
                                   <p className="text-muted leading-relaxed">
                                     {isLate
                                       ? isTeacher
-                                        ? "وفق سياسة المنصة (FR-4.6): إلغاء المدرّس المتأخر يُعد غياباً، وسيتم استرجاع الرصيد بالكامل إلى محفظة المتعلم."
-                                        : `وفق سياسة المنصة (FR-4.6): إلغاء المتعلم المتأخر يُعد غياباً، وسيتم تحويل الساعات المحجوزة (${session.durationMinutes} دقيقة) إلى المدرّس كتعويض عن حجز وقته.`
-                                      : `وفق سياسة المنصة (FR-4.6): بما أن الإلغاء يتم قبل أكثر من 12 ساعة، سيتم استرجاع الرصيد بالكامل (${session.durationMinutes} دقيقة) إلى محفظة المتعلم دون أي خصم.`}
+                                        ? "وفق سياسة المنصة: إلغاء المدرّس المتأخر يُعد غياباً، وسيتم استرجاع الرصيد بالكامل إلى محفظة المتعلم."
+                                        : `وفق سياسة المنصة: إلغاء المتعلم المتأخر يُعد غياباً، وسيتم تحويل الساعات المحجوزة (${session.durationMinutes} دقيقة) إلى المدرّس كتعويض عن حجز وقته.`
+                                      : `وفق سياسة المنصة: بما أن الإلغاء يتم قبل أكثر من 12 ساعة، سيتم استرجاع الرصيد بالكامل (${session.durationMinutes} دقيقة) إلى محفظة المتعلم دون أي خصم.`}
                                   </p>
                                 </div>
                               </div>
