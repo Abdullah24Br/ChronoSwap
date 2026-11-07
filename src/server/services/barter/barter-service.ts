@@ -1169,6 +1169,7 @@ export async function getUserBarterCycles(
           learner: { select: { id: true, displayName: true, avatarUrl: true } },
           teacher: { select: { id: true, displayName: true, avatarUrl: true } },
         },
+        orderBy: { createdAt: "desc" }, // newest first: a re-booked leg shows its latest request
       },
     },
     orderBy: { proposedAt: "desc" },

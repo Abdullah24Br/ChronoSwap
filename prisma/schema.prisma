@@ -459,8 +459,10 @@ model Session {
   ledgerEntries LedgerEntry[]
   debts         Debt[]
 
-  /// FR-3.4: exactly one session per teacher inside a barter cycle.
-  @@unique([barterCycleId, teacherId])
+  /// FR-3.4 / Q-18: at most one *live* session per teacher inside a barter cycle (a rejected or
+  /// cancelled request may be re-booked). Partial unique index, hand-written in
+  /// migrations/*_barter_leg_rebooking (Prisma cannot express it).
+  @@index([barterCycleId, teacherId])
   @@index([teacherId, status])
   @@index([learnerId, status])
   /// NFR-3 jobs: auto-reject / no-show scans.

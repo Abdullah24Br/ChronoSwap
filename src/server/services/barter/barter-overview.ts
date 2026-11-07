@@ -54,6 +54,7 @@ export interface BarterOverview {
 export async function getBarterOverview(
   userId: string,
   client: PrismaClient = db,
+  now: Date = new Date(),
 ): Promise<BarterOverview> {
   const [cycles, inDebt] = await Promise.all([
     getUserBarterCycles(userId, client),
@@ -71,7 +72,9 @@ export async function getBarterOverview(
         const sessions = cycle.sessions.filter(
           (s) => s.teacherId === p.userId && s.learnerId === learner.userId,
         );
-        const session = sessions[0] ?? null;
+        // Q-18: the live request wins; otherwise show the latest (rejected / cancelled) one.
+        const session =
+          sessions.find((s) => !VOID_STATUSES.includes(s.status)) ?? sessions[0] ?? null;
         return {
           teacher: { id: p.userId, displayName: p.user.displayName },
           learner: { id: learner.userId, displayName: learner.user.displayName },
@@ -84,8 +87,13 @@ export async function getBarterOverview(
       });
 
       const myLeg = legs.find((l) => l.learner.id === userId);
+      const beforeDeadline = cycle.scheduleByAt === null || now <= cycle.scheduleByAt;
       const bookMyLeg =
-        cycle.status === "ACTIVE" && myLeg && myLeg.session === null && !inDebt
+        cycle.status === "ACTIVE" &&
+        beforeDeadline &&
+        myLeg &&
+        (myLeg.session === null || myLeg.voided) && // Q-18: a rejected leg can be re-booked
+        !inDebt
           ? { teacherId: myLeg.teacher.id, skillId: myLeg.skill.id }
           : null;
 

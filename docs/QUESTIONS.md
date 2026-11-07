@@ -6,6 +6,8 @@ Ambiguities, contradictions, and edge cases found in [SRS.md](SRS.md). Each has 
 
 Status legend: `DEFAULT` (assumed, not yet confirmed) · `CONFIRMED` (answered by the team).
 
+The seven open rules in [SUPERVISOR_DECISIONS.md](SUPERVISOR_DECISIONS.md) were decided on 2026-11-08: all defaults kept, except Q-18 (barter legs can now be re-booked).
+
 ---
 
 ## Accounts & availability
@@ -31,7 +33,7 @@ Gmail ignores dots and `+tags` (`sara+2@gmail.com` reaches `sara@gmail.com`), so
 
 ## Booking & cancellation
 
-### Q-5 ⭐ · FR-6.3 · How is "3 hours per week between the same two users" measured? `DEFAULT`
+### Q-5 ⭐ · FR-6.3 · How is "3 hours per week between the same two users" measured? `CONFIRMED`
 Unclear points: which week, which direction, and which statuses count.
 **Default:**
 - Week = ISO week (Monday 00:00 → Sunday 24:00, **UTC**) containing the session's start.
@@ -42,7 +44,7 @@ Unclear points: which week, which direction, and which statuses count.
 
 **Alternative:** a rolling 7-day window (stricter but harder to explain in the UI).
 
-### Q-11 ⭐ · FR-4.1 / FR-4.6 · Minimum notice for a booking request `DEFAULT`
+### Q-11 ⭐ · FR-4.1 / FR-4.6 · Minimum notice for a booking request `CONFIRMED`
 A request can be sent for 10 minutes from now, which the teacher can't realistically answer. A session accepted less than 12h before its start can never be cancelled "in time".
 **Default:** sessions must start at least **2 hours** after the request. The teacher may accept until the start time. The UI warns both sides when accepting inside the 12h window that cancelling will count as absence.
 
@@ -60,7 +62,7 @@ The clause "(مع حضور المدرّس)" naturally fits the "didn't join the 
 
 ## The session room
 
-### Q-8 ⭐ · FR-5.1 / FR-4.6 · When does the room open, and which entries count as attendance? `DEFAULT`
+### Q-8 ⭐ · FR-5.1 / FR-4.6 · When does the room open, and which entries count as attendance? `CONFIRMED`
 If the room opens at acceptance (needed to paste the Meet link), a teacher who opens it two days early shouldn't count as "present".
 **Default:** the room is accessible from acceptance onwards (link, notes, preparation). Attendance (`AttendanceLog` JOIN) counts toward no-show detection only if it falls within **[start − 15 min, start + 15 min]**. The session becomes IN_PROGRESS when both have a counted JOIN. At start + 15 min the job decides: teacher missing → NO_SHOW_TEACHER; learner missing (teacher present) → NO_SHOW_LEARNER; both missing → NO_SHOW_BOTH.
 
@@ -75,7 +77,7 @@ Not covered by the SRS.
 If they could, a teacher could add trivial tasks to reach 50% instantly.
 **Default:** the agenda is fixed once generated (AI or fallback). Both participants can tick and un-tick items until the session ends. The completion percentage is snapshotted at the end (`sessions.completion_percent`).
 
-### Q-7 ⭐ · FR-6.1 · Does "complete session" need one click or both? `DEFAULT`
+### Q-7 ⭐ · FR-6.1 · Does "complete session" need one click or both? `CONFIRMED`
 "يُفعَّل لكلا الطرفين … ويؤدي الضغط عليه إلى إنهاء الجلسة" can be read as "either side may press it" or "both must press it".
 **Default:** **either** participant may end the session once ≥ 50% of tasks are ticked. The learner stays protected by the quiz and by the 48h report window.
 **Alternative:** require both to confirm, which needs extra "waiting for the other side" UI.
@@ -87,7 +89,7 @@ If they could, a teacher could add trivial tasks to reach 50% instantly.
 ### Q-6 · FR-6.4 / FR-8.4 / FR-7.2 · The 48h timer ends while a dispute is open `DEFAULT`
 **Default:** a DISPUTED session is excluded from the release job. Frozen hours stay frozen until the admin decides. There is no automatic resolution and no admin deadline. The admin panel sorts disputes oldest-first.
 
-### Q-14 · FR-8.3 · Does the quiz score matter for release? `DEFAULT`
+### Q-14 · FR-8.3 · Does the quiz score matter for release? `CONFIRMED`
 **Default:** no. Submitting the quiz (any score) releases the hours. The score is stored as evidence for disputes. There is one attempt only, since answers are revealed afterwards.
 
 ### Q-23 · FR-6.4 · Solving the quiz closes the report window early `DEFAULT`
@@ -110,7 +112,7 @@ If they could, a teacher could add trivial tasks to reach 50% instantly.
 
 ## Barter (FR-3.3 / FR-3.4)
 
-### Q-16 ⭐ · FR-3.4 · Debt rules `DEFAULT`
+### Q-16 ⭐ · FR-3.4 · Debt rules `CONFIRMED`
 - **Debt is created** only when a failed cycle is settled and the learner's available balance is short. Available goes to 0 and the rest becomes a `Debt` row.
 - **Repayment:** debt is paid from **earnings only** (teaching credits and admin "pay teacher" decisions), FIFO, before anything reaches available. Refunds of the user's own frozen hours are not earnings.
 - **While in debt** the user cannot request sessions or join new barter cycles, but **can still teach** (that's how they repay).
@@ -119,9 +121,9 @@ If they could, a teacher could add trivial tasks to reach 50% instantly.
 ### Q-17 · FR-3.4 / FR-4.6 · No-shows inside a barter session `DEFAULT`
 **Default:** apply the normal FR-4.6 outcomes with "settle" instead of "release". A learner who is absent or cancels late makes that session failed for the cycle and pays the teacher from available (shortfall → debt). A teacher who is absent makes the session failed with nothing to refund (no escrow). Either way the cycle becomes FAILED.
 
-### Q-18 · FR-3.4 · Cycle lifecycle details `DEFAULT`
+### Q-18 · FR-3.4 · Cycle lifecycle details `CONFIRMED`
 - **Proposal:** the barter engine finds the cycle, and the user who triggers the search proposes a duration (30/60/90/120). The other two accept or decline. It expires after **72h** (EXPIRED) and any decline makes it DECLINED.
-- **Booking:** once ACTIVE, each learner books their session through the normal request/accept flow (no freeze). All three sessions must be **booked within 14 days**, otherwise the missing ones count as failed. The schema allows **one session per teacher per cycle**, so a rejected or cancelled barter request cannot be re-booked: that leg stays missing and the cycle fails at the deadline (implemented in `reconcileBarterCycles`).
+- **Booking:** once ACTIVE, each learner books their session through the normal request/accept flow (no freeze). All three sessions must be **booked within 14 days**, otherwise the missing ones count as failed. **Decided 2026-11-08:** a rejected, auto-rejected or cancelled barter request may be **re-booked** before that deadline; at most one live request per leg (partial unique index `sessions_one_live_barter_leg`). After the deadline no new requests are accepted and a leg without a live session fails the cycle (`reconcileBarterCycles`).
 - **Limits:** the FR-6.3 weekly cap applies to barter sessions. Users with debt can't join (Q-16). A user may be in several cycles at once.
 
 ### Q-19 · FR-3.4 · What happens to unfinished sessions when a cycle fails? `DEFAULT`

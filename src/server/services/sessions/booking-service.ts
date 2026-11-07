@@ -385,6 +385,28 @@ export async function requestSession(
       );
     }
 
+    // Q-18: requests must be sent before the cycle's 14-day scheduling deadline.
+    if (cycle.scheduleByAt && now > cycle.scheduleByAt) {
+      throw new DomainError("BARTER_DEADLINE_PASSED", "انتهت مهلة حجز جلسات حلقة المقايضة هذه");
+    }
+
+    // Q-18: a rejected or cancelled leg may be re-booked, but never twice at once
+    // (the partial unique index "sessions_one_live_barter_leg" guarantees it in the DB too).
+    const liveLeg = await client.session.findFirst({
+      where: {
+        barterCycleId: cycle.id,
+        teacherId: input.teacherId,
+        status: { notIn: ["REJECTED", "AUTO_REJECTED", "CANCELLED"] },
+      },
+      select: { id: true },
+    });
+    if (liveLeg) {
+      throw new DomainError(
+        "BARTER_LEG_BOOKED",
+        "يوجد طلب أو جلسة قائمة لهذا الجزء من حلقة المقايضة",
+      );
+    }
+
     // Create barter session (no escrow freeze)
     const barterSession = await client.$transaction(async (tx) => {
       const session = await tx.session.create({

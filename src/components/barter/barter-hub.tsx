@@ -333,7 +333,10 @@ function MyCycleCard({ cycle, timezone }: { cycle: BarterOverviewCycle; timezone
             size="sm"
             icon={<CalendarPlus className="size-4" />}
           >
-            احجز جلستك في هذه الحلقة
+            {/* Q-18: a rejected or cancelled request can be sent again before the deadline */}
+            {cycle.legs.some((l) => l.learner.id === myId && l.voided)
+              ? "أعد حجز جلستك (رُفض الطلب السابق أو أُلغي)"
+              : "احجز جلستك في هذه الحلقة"}
           </ButtonLink>
         )}
       </CardContent>
