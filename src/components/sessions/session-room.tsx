@@ -105,6 +105,8 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
   const isTeacher = session.teacher.id === currentUserId;
   const partner = isTeacher ? session.learner : session.teacher;
   const isEnded = session.status !== "ACCEPTED" && session.status !== "IN_PROGRESS";
+  // Q-8 / Q-13 / FR-6.1: ticking and completing are only possible while the session runs.
+  const isRunning = session.status === "IN_PROGRESS";
 
   // ─────────────────────────────────────────────────────────────
   // Countdown Timer
@@ -341,7 +343,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
   // Toggle Agenda Task (FR-5.4)
   // ─────────────────────────────────────────────────────────────
   const handleToggleTask = (taskId: string) => {
-    if (isEnded) return;
+    if (!isRunning) return;
     setErrorMessage(null);
 
     // Optimistic UI update
@@ -1140,11 +1142,12 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                       task.isDone
                         ? "bg-success/5 border-success/30 text-fg"
                         : "bg-canvas border-line text-fg hover:border-line-strong"
-                    } ${isEnded ? "cursor-default" : ""}`}
+                    } ${isRunning ? "" : "cursor-default"}`}
                   >
                     <button
                       type="button"
-                      disabled={isEnded}
+                      disabled={!isRunning}
+                      aria-label={task.isDone ? `إلغاء تأشير: ${task.title}` : `تأشير: ${task.title}`}
                       className="mt-0.5 text-muted hover:text-fg transition-colors"
                     >
                       {task.isDone ? (
@@ -1176,8 +1179,16 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                 ))
               )}
 
+              {/* Q-8: before both join around the start time, explain instead of offering the button */}
+              {session.status === "ACCEPTED" && (
+                <p className="pt-3 border-t border-line text-[0.7rem] text-muted text-center leading-relaxed">
+                  تبدأ الجلسة عندما يدخل الطرفان الغرفة بين 15 دقيقة قبل الموعد و15 دقيقة بعده، وعندها
+                  يمكن تأشير المهام وإتمام الجلسة.
+                </p>
+              )}
+
               {/* FR-6.1 Completion Button */}
-              {!isEnded && (
+              {isRunning && (
                 <div className="pt-3 border-t border-line space-y-2">
                   <Button
                     type="button"

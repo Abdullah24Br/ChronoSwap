@@ -5,6 +5,8 @@ import { SessionsDashboard } from "@/components/sessions/sessions-dashboard";
 import { BookOpenCheck, CalendarClock } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 
+export const metadata = { title: "جلساتي" };
+
 export const instant = false;
 
 export default async function SessionsPage() {

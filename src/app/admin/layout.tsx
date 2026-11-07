@@ -15,7 +15,7 @@ import {
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "لوحة تحكم الإدارة | ChronoSwap",
+  title: "لوحة تحكم الإدارة",
   description: "لوحة تحكم مدير النظام لإدارة المهارات والنزاعات وإحصائيات المنصة",
 };
 

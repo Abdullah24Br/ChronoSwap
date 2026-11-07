@@ -7,6 +7,7 @@ import { loginAction, resendVerificationAction } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { safeNextPath } from "@/lib/safe-redirect";
 import { Lock, Mail, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -35,8 +36,8 @@ export default function LoginPage() {
           setIsNotVerified(true);
         }
       } else {
-        // Successful login: navigate to home / dashboard
-        router.push("/");
+        // Back to the page that asked for login (e.g. /admin), same-site paths only
+        router.push(safeNextPath(new URLSearchParams(window.location.search).get("next")));
         router.refresh();
       }
     });

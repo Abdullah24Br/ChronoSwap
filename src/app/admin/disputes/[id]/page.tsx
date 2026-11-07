@@ -11,7 +11,7 @@ import { AlertCircle, ArrowRight } from "lucide-react";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "ملف التحكيم وفض النزاع | ChronoSwap",
+  title: "ملف التحكيم وفض النزاع",
   description: "مراجعة أدلة الجلسة وسجل الحضور والأجندة لاتخاذ قرار التحكيم",
 };
 

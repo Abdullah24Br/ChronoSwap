@@ -6,6 +6,8 @@ import { SessionBookingForm } from "@/components/sessions/session-booking-form";
 import { ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
 
+export const metadata = { title: "طلب حجز جلسة" };
+
 export const instant = false;
 
 interface NewSessionPageProps {

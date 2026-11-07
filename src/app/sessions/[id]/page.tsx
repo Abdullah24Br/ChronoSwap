@@ -11,7 +11,7 @@ import { AlertCircle, ArrowRight } from "lucide-react";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "غرفة الجلسة التفاعلية | ChronoSwap",
+  title: "غرفة الجلسة",
   description: "غرفة الجلسة التعليمية المباشرة والمحرر التشاركي في منصة ChronoSwap",
 };
 
