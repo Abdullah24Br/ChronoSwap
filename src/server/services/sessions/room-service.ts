@@ -272,7 +272,8 @@ export async function completeSessionByParticipant(
       throw new DomainError("FORBIDDEN", "لا تملك صلاحية إتمام هذه الجلسة");
     }
 
-    if (session.status !== "IN_PROGRESS" && session.status !== "ACCEPTED") {
+    // FR-6.1: only a running session can be completed (IN_PROGRESS -> ENDED is the legal edge).
+    if (session.status !== "IN_PROGRESS") {
       throw new DomainError(
         "INVALID_STATUS",
         "لا يمكن إتمام هذه الجلسة لأنها ليست قيد الانعقاد",
@@ -297,7 +298,7 @@ export async function completeSessionByParticipant(
     const res = await tx.session.updateMany({
       where: {
         id: session.id,
-        status: { in: ["IN_PROGRESS", "ACCEPTED"] },
+        status: "IN_PROGRESS",
       },
       data: {
         status: "ENDED",
@@ -316,7 +317,7 @@ export async function completeSessionByParticipant(
     await tx.sessionEvent.create({
       data: {
         sessionId: session.id,
-        fromStatus: session.status,
+        fromStatus: "IN_PROGRESS",
         toStatus: "ENDED",
         trigger: "FR-6.1:complete-button",
         actorId: userId,

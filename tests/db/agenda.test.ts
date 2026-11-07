@@ -137,7 +137,7 @@ describe("Session Agenda Planner & Fallback (FR-4.3 / FR-4.4)", () => {
     const session = await db.session.create({
       data: {
         kind: "DIRECT",
-        status: "ACCEPTED",
+        status: "IN_PROGRESS",
         learnerId: learner.id,
         teacherId: teacher.id,
         skillId: skill.id,

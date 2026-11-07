@@ -130,13 +130,13 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     );
 
     // Learner can access
-    const learnerData = await getSessionRoomData(session.id, learner.id);
+    const learnerData = await getSessionRoomData(session.id, learner.id, db, session.startAt);
     expect(learnerData.id).toBe(session.id);
     expect(learnerData.isLearner).toBe(true);
     expect(learnerData.isTeacher).toBe(false);
 
     // Teacher can access
-    const teacherData = await getSessionRoomData(session.id, teacher.id);
+    const teacherData = await getSessionRoomData(session.id, teacher.id, db, session.startAt);
     expect(teacherData.id).toBe(session.id);
     expect(teacherData.isTeacher).toBe(true);
     expect(teacherData.isLearner).toBe(false);
@@ -187,7 +187,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     );
     expect(updated.meetingUrl).toBe("https://meet.google.com/abc-defg-hij");
 
-    const fetched = await getSessionRoomData(session.id, teacher.id);
+    const fetched = await getSessionRoomData(session.id, teacher.id, db, session.startAt);
     expect(fetched.meetingUrl).toBe("https://meet.google.com/abc-defg-hij");
   });
 
@@ -232,8 +232,8 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     await acceptSessionRequest(teacher.id, { sessionId: session.id });
 
     // Enter room so session becomes IN_PROGRESS
-    await getSessionRoomData(session.id, teacher.id);
-    await getSessionRoomData(session.id, learner.id);
+    await getSessionRoomData(session.id, teacher.id, db, session.startAt);
+    await getSessionRoomData(session.id, learner.id, db, session.startAt);
 
     // Attempting to complete with 0% checked tasks throws THRESHOLD_NOT_MET
     await expect(completeSessionByParticipant(teacher.id, session.id)).rejects.toThrow(
@@ -277,7 +277,9 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
       codeLanguage: "javascript",
     });
 
-    // Mark tasks done and complete session
+    // Both join at the start time (Q-8), tick every task, then complete
+    await getSessionRoomData(session.id, teacher.id, db, session.startAt);
+    await getSessionRoomData(session.id, learner.id, db, session.startAt);
     await db.agendaTask.updateMany({
       where: { sessionId: session.id },
       data: { isDone: true, doneAt: new Date() },
@@ -285,7 +287,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     await completeSessionByParticipant(teacher.id, session.id);
 
     // Fetch room in archive mode
-    const archiveData = await getSessionRoomData(session.id, learner.id);
+    const archiveData = await getSessionRoomData(session.id, learner.id, db, session.startAt);
     expect(archiveData.status).toBe("ENDED");
     expect(archiveData.workspace?.notes).toBe("ملخص محفوظ للأبد في أرشيف المتعلم");
     expect(archiveData.workspace?.code).toBe("const sum = (a, b) => a + b;");

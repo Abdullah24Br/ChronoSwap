@@ -264,6 +264,11 @@ export async function toggleAgendaTask(
     throw new DomainError("FORBIDDEN", "لا تملك صلاحية تعديل مهام هذه الجلسة");
   }
 
+  // Q-13: tasks can be ticked only while the session runs; afterwards they are evidence (FR-7.2).
+  if (task.session.status !== "IN_PROGRESS") {
+    throw new DomainError("INVALID_STATUS", "يمكن تأشير مهام الأجندة أثناء انعقاد الجلسة فقط");
+  }
+
   const willBeDone = !task.isDone;
   const now = new Date();
 

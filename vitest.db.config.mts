@@ -14,6 +14,7 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 120_000,
-    env: { DATABASE_URL: testDatabaseUrl() },
+    // Tests never call the real Gemini (FR-4.3 / FR-8.1): tests that need AI mock callGemini.
+    env: { DATABASE_URL: testDatabaseUrl(), GEMINI_API_KEY: "" },
   },
 });
