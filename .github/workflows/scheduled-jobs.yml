@@ -1,0 +1,29 @@
+# NFR-3 on serverless hosting: Vercel's free plan cannot run per-minute jobs, so GitHub calls the
+# protected endpoint instead. Needs two repository secrets: APP_URL (https://…vercel.app) and
+# CRON_SECRET (same value as on Vercel). Without them the workflow does nothing.
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # GitHub's shortest interval; runs can start a few minutes late
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Run one job tick
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "APP_URL or CRON_SECRET is not set; skipping."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -X POST -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/jobs/run"

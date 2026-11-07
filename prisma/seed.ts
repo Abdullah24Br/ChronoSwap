@@ -8,6 +8,11 @@ import { ensureWallet, grantWelcomeBonus } from "../src/server/services/wallet/w
 // FR-1.1: the ADMIN account exists only because this script creates it.
 
 const ADMIN_EMAIL = normalizeEmail(process.env.SEED_ADMIN_EMAIL ?? "admin@chronoswap.test");
+const IS_LOCAL_DB = /@(localhost|127\.0\.0\.1)[:/]/.test(process.env.DATABASE_URL ?? "");
+// NFR-1: the default admin password is public (README), so it is only allowed on a local database.
+if (!IS_LOCAL_DB && !process.env.SEED_ADMIN_PASSWORD) {
+  throw new Error("Set SEED_ADMIN_PASSWORD before seeding a hosted database (the default one is public).");
+}
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "Admin#ChronoSwap2026";
 const DEMO_PASSWORD = "Demo#ChronoSwap2026";
 
@@ -164,7 +169,7 @@ async function main() {
     ledgerEntries: await db.ledgerEntry.count(),
   };
   console.log("✔ Seed complete", counts);
-  console.log(`  Admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
+  console.log(`  Admin: ${ADMIN_EMAIL} / ${IS_LOCAL_DB ? ADMIN_PASSWORD : "(SEED_ADMIN_PASSWORD)"}`);
   console.log(`  Demo users (${DEMO_PASSWORD}): ${DEMO_USERS.map((u) => u.email).join(", ")}`);
 }
 

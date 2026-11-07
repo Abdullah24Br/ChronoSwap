@@ -57,6 +57,10 @@ To try the 3-way barter: log in as Sara, open `/barter` and propose the suggeste
 
 E-mails (verification links) are printed in the `npm run dev` terminal unless `SMTP_URL` is set.
 
+## Deployment
+
+Step-by-step (Arabic) for Vercel + Neon + GitHub Actions: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Scheduled jobs (NFR-3)
 
 The server runs one job tick every `JOBS_INTERVAL_SECONDS` (default 60) from [`src/instrumentation.ts`](src/instrumentation.ts):
