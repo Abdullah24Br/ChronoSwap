@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Reem_Kufi } from "next/font/google";
+import { PageTransition } from "@/components/motion/page-transition";
 import { AppShell } from "@/components/shell/app-shell";
 import { THEME_INIT_SCRIPT } from "@/components/shell/theme";
 import { ToastProvider } from "@/components/ui/toast";
@@ -44,7 +45,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <ToastProvider>
-          <AppShell>{children}</AppShell>
+          <PageTransition>
+            <AppShell>{children}</AppShell>
+          </PageTransition>
         </ToastProvider>
       </body>
     </html>
