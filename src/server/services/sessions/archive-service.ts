@@ -4,7 +4,7 @@ import type { SessionStatus } from "@/generated/prisma/enums";
 import { db } from "@/server/db";
 
 /** Statuses of a session that actually took place and finished (FR-5.5). */
-const ARCHIVED_STATUSES: SessionStatus[] = [
+export const ARCHIVED_STATUSES: SessionStatus[] = [
   "ENDED",
   "QUIZ_PENDING",
   "DISPUTED",
