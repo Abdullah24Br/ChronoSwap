@@ -77,20 +77,26 @@ export async function registerUser(input: RegisterUserInput) {
 
   // The verification link goes out by e-mail (Gmail SMTP in production, console in development).
   const verifyUrl = `${env().APP_URL}/verify-email?token=${rawToken}`;
-  await sendMail({
-    to: normalizedEmail,
-    subject: "فعّل حسابك في ChronoSwap",
-    text: [
-      `مرحباً ${user.displayName}،`,
-      "",
-      "شكراً لانضمامك إلى ChronoSwap، منصة تبادل المهارات بنظام بنك الوقت.",
-      "فعّل حسابك بالنقر على الرابط التالي (صالح لمدة 24 ساعة):",
-      verifyUrl,
-      "",
-      "بعد التفعيل تحصل تلقائياً على رصيد ترحيبي قدره ساعتان (120 دقيقة).",
-      "إذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.",
-    ].join("\n"),
-  });
+  // The account already exists at this point, so a mail failure must not fail the sign-up:
+  // the user can ask for a new link from the login page. The error goes to the server log.
+  try {
+    await sendMail({
+      to: normalizedEmail,
+      subject: "فعّل حسابك في ChronoSwap",
+      text: [
+        `مرحباً ${user.displayName}،`,
+        "",
+        "شكراً لانضمامك إلى ChronoSwap، منصة تبادل المهارات بنظام بنك الوقت.",
+        "فعّل حسابك بالنقر على الرابط التالي (صالح لمدة 24 ساعة):",
+        verifyUrl,
+        "",
+        "بعد التفعيل تحصل تلقائياً على رصيد ترحيبي قدره ساعتان (120 دقيقة).",
+        "إذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.",
+      ].join("\n"),
+    });
+  } catch (error) {
+    console.error("[mail] verification e-mail failed", error);
+  }
 
   return {
     userId: user.id,

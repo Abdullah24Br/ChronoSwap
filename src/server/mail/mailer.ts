@@ -14,6 +14,8 @@ export interface MailMessage {
 export async function sendMail(message: MailMessage): Promise<void> {
   const { SMTP_URL, MAIL_FROM } = env();
   if (!SMTP_URL) {
+    // Visible in the hosting logs too: a deployment without SMTP settings never sends real mail.
+    if (env().NODE_ENV === "production") console.warn("[mail] SMTP_URL is not set: e-mail printed, not sent");
     console.info(
       [
         "",
