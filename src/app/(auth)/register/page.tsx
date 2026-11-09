@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { registerAction } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -9,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Mail, Lock, User } from "lucide-react";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [formError, setFormError] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   const [isPending, startTransition] = useTransition();
@@ -32,12 +31,32 @@ export default function RegisterPage() {
           setFieldErrors(res.error.fieldErrors);
         }
       } else {
-        // Direct login & redirect to dashboard / home
-        router.push("/");
-        router.refresh();
+        // FR-1.1: no session yet; the account is activated from the link in the e-mail.
+        setSentTo(res.data.email);
       }
     });
   };
+
+  if (sentTo) {
+    return (
+      <div className="flex flex-col gap-6">
+        <header className="space-y-2">
+          <h1 className="text-4xl leading-tight md:text-5xl">تحقق من بريدك</h1>
+          <p className="text-muted">
+            أرسلنا رابط التفعيل إلى <bdi dir="ltr" className="font-medium text-fg">{sentTo}</bdi>. افتح الرسالة واضغط
+            على الرابط لتفعيل حسابك، وبعدها تحصل على ساعتيك الترحيبيتين.
+          </p>
+        </header>
+        <p className="text-sm text-muted">
+          لم تصلك الرسالة؟ تحقق من مجلد الرسائل غير المرغوب فيها (Spam)، أو{" "}
+          <Link href="/login" className="font-medium text-cyan-ink underline-offset-4 hover:underline">
+            سجّل الدخول لطلب رابط جديد
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">

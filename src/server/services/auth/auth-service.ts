@@ -9,6 +9,7 @@ import { generateToken, hashToken, normalizeEmail } from "@/server/auth/tokens";
 import { ensureWallet, grantWelcomeBonus } from "@/server/services/wallet/wallet-service";
 import {
   EmailAlreadyExistsError,
+  EmailNotVerifiedError,
   InvalidCredentialsError,
   InvalidTokenError,
 } from "@/server/errors";
@@ -53,7 +54,7 @@ export async function registerUser(input: RegisterUserInput) {
   const tokenHash = hashToken(rawToken);
   const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
 
-  // Transaction: create user, token, and empty wallet
+  // FR-1.1: the account stays unverified until the link in the e-mail is used.
   const user = await db.$transaction(async (tx) => {
     const newUser = await tx.user.create({
       data: {
@@ -62,54 +63,40 @@ export async function registerUser(input: RegisterUserInput) {
         displayName: input.displayName.trim(),
         timezone: input.timezone || "Asia/Damascus",
         role: "USER", // FR-1.1: registration always creates USER
-        emailVerifiedAt: new Date(), // Immediate activation
+        emailVerifiedAt: null,
       },
     });
 
     await tx.emailVerificationToken.create({
-      data: {
-        userId: newUser.id,
-        tokenHash,
-        expiresAt,
-        usedAt: new Date(),
-      },
+      data: { userId: newUser.id, tokenHash, expiresAt },
     });
 
     await ensureWallet(tx, newUser.id);
     return newUser;
   });
 
-  // FR-1.2: Grant welcome bonus immediately
-  try {
-    await grantWelcomeBonus(db, user.id);
-  } catch (e) {
-    console.error("Welcome bonus error:", e);
-  }
-
-  // Create login session immediately
-  await createAuthSession(user.id);
-
-  // Send welcome email in the background (printed to console in dev mode)
-  try {
-    await sendMail({
-      to: normalizedEmail,
-      subject: "مرحباً بك في ChronoSwap",
-      text: [
-        `مرحباً ${user.displayName}،`,
-        "",
-        "شكراً لانضمامك إلى ChronoSwap — منصة تبادل المهارات بنظام بنك الوقت.",
-        "تم تفعيل حسابك بنجاح، وحصلت تلقائياً على رصيد ترحيبي قدره ساعتان (120 دقيقة) في محفظتك (FR-1.2)!",
-        `رابط المنصة: ${env().APP_URL}`,
-      ].join("\n"),
-    });
-  } catch (e) {
-    console.error("Mail send error:", e);
-  }
+  // The verification link goes out by e-mail (Gmail SMTP in production, console in development).
+  const verifyUrl = `${env().APP_URL}/verify-email?token=${rawToken}`;
+  await sendMail({
+    to: normalizedEmail,
+    subject: "فعّل حسابك في ChronoSwap",
+    text: [
+      `مرحباً ${user.displayName}،`,
+      "",
+      "شكراً لانضمامك إلى ChronoSwap، منصة تبادل المهارات بنظام بنك الوقت.",
+      "فعّل حسابك بالنقر على الرابط التالي (صالح لمدة 24 ساعة):",
+      verifyUrl,
+      "",
+      "بعد التفعيل تحصل تلقائياً على رصيد ترحيبي قدره ساعتان (120 دقيقة).",
+      "إذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.",
+    ].join("\n"),
+  });
 
   return {
     userId: user.id,
     email: user.email,
     displayName: user.displayName,
+    needsVerification: true as const,
   };
 }
 
@@ -230,17 +217,9 @@ export async function loginUser(input: LoginUserInput) {
     throw new InvalidCredentialsError();
   }
 
-  // If user registered before auto-verification was enabled, activate them now
+  // FR-1.1: an account is usable only after its e-mail link was used.
   if (!user.emailVerifiedAt) {
-    await db.user.update({
-      where: { id: user.id },
-      data: { emailVerifiedAt: new Date() },
-    });
-    try {
-      await grantWelcomeBonus(db, user.id);
-    } catch {
-      // ignore if already granted
-    }
+    throw new EmailNotVerifiedError();
   }
 
   await createAuthSession(user.id, input.userAgent);
