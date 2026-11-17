@@ -113,11 +113,14 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
   // ─────────────────────────────────────────────────────────────
   // Countdown Timer
   // ─────────────────────────────────────────────────────────────
-  const [timeLeftMs, setTimeLeftMs] = useState<number>(() => {
-    if (isEnded) return 0;
-    const endAtMs = new Date(session.endAt).getTime();
-    return Math.max(0, endAtMs - Date.now());
-  });
+  // `now` stays null until the component mounts: the server and the first client render then
+  // print the same placeholder (no hydration mismatch from a clock that moved by a second).
+  const [now, setNow] = useState<number | null>(null);
+  const startAtMs = new Date(session.startAt).getTime();
+  const endAtMs = new Date(session.endAt).getTime();
+  // Q-28: before the start the ring waits for startAt; from then on it runs down to endAt.
+  const beforeStart = !isRunning && now !== null && now < startAtMs;
+  const timeLeftMs = now === null || isEnded ? null : Math.max(0, (beforeStart ? startAtMs : endAtMs) - now);
 
   // Rating state (FR-6.2)
   const [ratingStars, setRatingStars] = useState(session.rating?.stars || 5);
@@ -131,11 +134,11 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
 
   useEffect(() => {
     if (isEnded) return;
-    const interval = setInterval(() => {
-      const endAtMs = new Date(session.endAt).getTime();
-      const diff = endAtMs - Date.now();
-      if (diff <= 0) {
-        setTimeLeftMs(0);
+    const endMs = new Date(session.endAt).getTime();
+    const tick = () => {
+      const current = Date.now();
+      setNow(current);
+      if (endMs - current <= 0) {
         clearInterval(interval);
         if (session.status === "IN_PROGRESS") {
           startTransition(async () => {
@@ -143,10 +146,10 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
             router.refresh();
           });
         }
-      } else {
-        setTimeLeftMs(diff);
       }
-    }, 1000);
+    };
+    const interval = setInterval(tick, 1000);
+    tick();
     return () => clearInterval(interval);
   }, [session.endAt, session.id, session.status, isEnded, router]);
 
@@ -467,7 +470,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
             <CountdownRing
               timeLeftMs={timeLeftMs}
               durationMinutes={session.durationMinutes}
-              label={isRunning ? "الوقت المتبقي للجلسة" : "حتى نهاية الموعد"}
+              label={isRunning ? "الوقت المتبقي للجلسة" : beforeStart ? "حتى بدء الجلسة" : "حتى نهاية الموعد"}
             />
           ) : (
             <div className="flex items-center gap-2 rounded-xl border border-line bg-raised px-4 py-2 text-xs text-muted">

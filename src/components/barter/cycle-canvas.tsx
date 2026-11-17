@@ -181,7 +181,7 @@ export function CycleCanvas({ names, meIndex, className }: CycleCanvasProps) {
       <ol className="sr-only">
         {names.map((n, i) => (
           <li key={i}>
-            {n} يعلّم {names[(i + 1) % 3]}
+            {names[(i + 1) % 3] === "أنت" ? `${n} يعلّمك` : `${n} ${n === "أنت" ? "تعلّم" : "يعلّم"} ${names[(i + 1) % 3]}`}
           </li>
         ))}
       </ol>

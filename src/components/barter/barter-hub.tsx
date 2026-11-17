@@ -207,8 +207,11 @@ function Leg({
   return (
     <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className={cn("font-semibold", tone === "amber" ? "text-amber-ink" : "text-fg")}>{teacher}</span>
-      <span className="text-muted">يعلّم</span>
-      <span className={cn("font-semibold", tone === "cyan" ? "text-cyan-ink" : "text-fg")}>{learner}</span>
+      {/* "أنت تعلّم عمر" / "عمر يعلّمك": the verb agrees with "you" and the object pronoun attaches. */}
+      <span className="text-muted">{learner === "أنت" ? "يعلّمك" : teacher === "أنت" ? "تعلّم" : "يعلّم"}</span>
+      {learner !== "أنت" && (
+        <span className={cn("font-semibold", tone === "cyan" ? "text-cyan-ink" : "text-fg")}>{learner}</span>
+      )}
       <ArrowLeft className="size-3.5 text-subtle" aria-hidden />
       <Badge tone={tone ?? "neutral"}>{skill}</Badge>
       {trailing && <span className="ms-auto">{trailing}</span>}

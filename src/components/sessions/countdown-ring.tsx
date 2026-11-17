@@ -7,7 +7,8 @@ import { FULL_MOTION, gsap, useGSAP } from "@/components/motion/gsap";
 // (Q-28: it runs from startAt to endAt). Brass while there is time, danger in the last 5 minutes,
 // and a heartbeat in the final minute.
 interface CountdownRingProps {
-  timeLeftMs: number;
+  /** null before the first client tick: shows a placeholder so server and client HTML match. */
+  timeLeftMs: number | null;
   durationMinutes: number;
   label: string;
 }
@@ -18,9 +19,10 @@ const C = 2 * Math.PI * R;
 export function CountdownRing({ timeLeftMs, durationMinutes, label }: CountdownRingProps) {
   const root = useRef<HTMLDivElement>(null);
   const totalMs = durationMinutes * 60_000;
-  const fraction = totalMs > 0 ? Math.min(Math.max(timeLeftMs / totalMs, 0), 1) : 0;
-  const urgent = timeLeftMs > 0 && timeLeftMs <= 5 * 60_000;
-  const final = timeLeftMs > 0 && timeLeftMs <= 60_000;
+  const left = timeLeftMs ?? totalMs;
+  const fraction = totalMs > 0 ? Math.min(Math.max(left / totalMs, 0), 1) : 0;
+  const urgent = timeLeftMs !== null && timeLeftMs > 0 && timeLeftMs <= 5 * 60_000;
+  const final = timeLeftMs !== null && timeLeftMs > 0 && timeLeftMs <= 60_000;
 
   // Each second the ring eases to its new length instead of jumping.
   useGSAP(
@@ -49,9 +51,7 @@ export function CountdownRing({ timeLeftMs, durationMinutes, label }: CountdownR
     { scope: root, dependencies: [final] },
   );
 
-  const minutes = Math.floor(timeLeftMs / 60_000);
-  const seconds = Math.floor((timeLeftMs % 60_000) / 1000);
-  const text = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  const text = timeLeftMs === null ? "--:--" : formatCountdown(timeLeftMs);
 
   return (
     <div ref={root} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3 py-2">
@@ -79,4 +79,14 @@ export function CountdownRing({ timeLeftMs, durationMinutes, label }: CountdownR
       </div>
     </div>
   );
+}
+
+/** mm:ss under an hour, h:mm:ss from an hour up (a session two days away reads "43:12:05"). */
+function formatCountdown(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  const two = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${two(m)}:${two(sec)}` : `${two(m)}:${two(sec)}`;
 }

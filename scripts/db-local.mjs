@@ -78,6 +78,16 @@ if (!rowCount) {
   await client.query(`CREATE DATABASE ${DATABASE} ENCODING 'UTF8' TEMPLATE template0`);
   console.log(`• Created database "${DATABASE}"`);
 }
+// Prisma's pg adapter sends instants without an offset, so the server must run in UTC like Neon
+// does. On a machine set to e.g. Asia/Damascus, initdb copies that zone and every stored time
+// shifts by the local offset. ALTER SYSTEM persists it for existing clusters too.
+const { rows } = await client.query("SELECT current_setting('TimeZone') AS tz");
+if (rows[0].tz !== "UTC") {
+  await client.query("ALTER SYSTEM SET timezone = 'UTC'");
+  await client.query("ALTER SYSTEM SET log_timezone = 'UTC'");
+  await client.query("SELECT pg_reload_conf()");
+  console.log(`• Server time zone set to UTC (was ${rows[0].tz})`);
+}
 await client.end();
 
 console.log(`\n✔ PostgreSQL is running:\n  postgresql://${USER}:${PASSWORD}@localhost:${PORT}/${DATABASE}\n`);
