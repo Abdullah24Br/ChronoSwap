@@ -14,8 +14,13 @@ from dataclasses import dataclass
 from typing import Protocol
 
 # Tried in order when one is overloaded (429 / 5xx) or retired (404). Override with GEMINI_MODEL
-# (comma-separated) without touching the code.
-DEFAULT_MODELS = ("gemini-3.8-flash", "gemini-3.5-flash-lite")
+# (comma-separated) without touching the code. The "-latest" aliases follow Google's current models,
+# so the list keeps working when pinned versions are retired.
+DEFAULT_MODELS = ("gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-flash-lite-latest")
+
+# One overloaded model can hang for 10+ s before answering 503; cap each call so the others still
+# get a turn inside the request budget (NFR-5).
+PER_CALL_SECONDS = 9.0
 
 log = logging.getLogger("chronoswap.ai")
 
@@ -69,6 +74,7 @@ class GeminiLLM:
                 remaining_ms = int((deadline - time.monotonic()) * 1000)
                 if remaining_ms < 1500:
                     raise LLMUnavailable("deadline reached") from last_error
+                call_ms = min(remaining_ms, int(PER_CALL_SECONDS * 1000))
                 try:
                     response = self._client.models.generate_content(
                         model=model,
@@ -76,7 +82,8 @@ class GeminiLLM:
                         config=types.GenerateContentConfig(
                             temperature=0.2,
                             response_mime_type="application/json",
-                            http_options=types.HttpOptions(timeout=remaining_ms),
+                            http_options=types.HttpOptions(timeout=call_ms),
+                            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
                         ),
                     )
                 except errors.APIError as error:
