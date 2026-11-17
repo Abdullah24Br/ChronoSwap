@@ -1,0 +1,6 @@
+# Local development and tests for the AI service (not deployed).
+-r requirements.txt
+pytest==9.0.3
+uvicorn==0.40.0
+httpx==0.28.1
+python-dotenv==1.1.1

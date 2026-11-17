@@ -1,16 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 import { db } from "@/server/db";
 import { DomainError } from "@/server/errors";
-import * as geminiClient from "@/server/services/ai/gemini-client";
+import * as aiServiceClient from "@/server/services/ai/ai-service-client";
 import {
   aiSummaryQuizSchema,
-  buildSummaryQuizPrompt,
+  buildSummaryQuizInput,
   generateSessionSummaryAndQuiz,
   submitQuizAttempt,
 } from "@/server/services/ai/summary-quiz-service";
 import { acceptSessionRequest, requestSession } from "@/server/services/sessions/booking-service";
 import { recordSessionAttendance } from "@/server/services/sessions/cancellation-service";
 import { getSessionRoomData } from "@/server/services/sessions/room-service";
+
+/** What the Python service returns once its graph produced a valid summary + quiz. */
+const aiResult = (json: string) => ({ status: "AI" as const, model: "fake-model", ...JSON.parse(json) });
 
 describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
   async function createFixture() {
@@ -134,25 +137,25 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
   // Unit & Schema checks
   // ─────────────────────────────────────────────────────────────
 
-  it("FR-8.6: strict privacy enforcement in prompt builder (no personal data)", () => {
-    const prompt = buildSummaryQuizPrompt({
+  it("FR-8.6: the service request holds educational content; names travel only to be removed", () => {
+    const input = buildSummaryQuizInput({
       skillName: "بايثون",
       categoryName: "برمجة",
       goal: "تعلم الدوال",
       tickedTasks: ["دوال مخصصة", "تطبيق عملي"],
       notes: "ملاحظات تعليمية فقط",
       code: "def hello(): pass",
+      participantNames: ["أحمد", "سارة"],
     });
 
-    expect(prompt).toContain("بايثون");
-    expect(prompt).toContain("تعلم الدوال");
-    expect(prompt).toContain("دوال مخصصة");
-    expect(prompt).toContain("def hello(): pass");
-
-    // Must NOT contain personal identifiers
-    expect(prompt).not.toContain("أحمد");
-    expect(prompt).not.toContain("سارة");
-    expect(prompt).not.toContain("@chronoswap");
+    expect(input).toMatchObject({ skill: "بايثون", goal: "تعلم الدوال", code: "def hello(): pass" });
+    expect(input.tickedTasks).toEqual(["دوال مخصصة", "تطبيق عملي"]);
+    // Q-22: names are sent apart so the graph's scrub node strips them; nothing else personal is sent
+    expect(input.participantNames).toEqual(["أحمد", "سارة"]);
+    const content = JSON.stringify({ ...input, participantNames: undefined });
+    expect(content).not.toContain("أحمد");
+    expect(content).not.toContain("سارة");
+    expect(content).not.toContain("@chronoswap");
   });
 
   it("FR-8.1: aiSummaryQuizSchema validates exactly 3 questions", () => {
@@ -228,9 +231,7 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
       ],
     });
 
-    const callGeminiSpy = vi
-      .spyOn(geminiClient, "callGemini")
-      .mockResolvedValueOnce(mockAiResponse);
+    const aiSpy = vi.spyOn(aiServiceClient, "requestSummaryQuiz").mockResolvedValueOnce(aiResult(mockAiResponse));
 
     const result = await generateSessionSummaryAndQuiz(fixture.session.id);
 
@@ -274,16 +275,14 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
     const secondCall = await generateSessionSummaryAndQuiz(fixture.session.id);
     expect(secondCall.status).toBe("ALREADY_EXISTS");
 
-    callGeminiSpy.mockRestore();
+    aiSpy.mockRestore();
   });
 
   it("FR-8.5: gracefully falls back when Gemini API fails or times out", async () => {
     const fixture = await createFixture();
 
     // Simulate Gemini failure (returns null per NFR-5 / fallback)
-    const callGeminiSpy = vi
-      .spyOn(geminiClient, "callGemini")
-      .mockResolvedValueOnce(null);
+    const aiSpy = vi.spyOn(aiServiceClient, "requestSummaryQuiz").mockResolvedValueOnce(null);
 
     const result = await generateSessionSummaryAndQuiz(fixture.session.id);
 
@@ -302,7 +301,40 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
     });
     expect(summary.status).toBe("FAILED");
 
-    callGeminiSpy.mockRestore();
+    aiSpy.mockRestore();
+  });
+
+  it("FR-8.6: sends both participants' names to the service so they can be stripped", async () => {
+    const fixture = await createFixture();
+    const spy = vi.spyOn(aiServiceClient, "requestSummaryQuiz").mockResolvedValueOnce(null);
+    await generateSessionSummaryAndQuiz(fixture.session.id);
+    const sent = spy.mock.calls[0][0];
+    expect(sent.participantNames).toEqual([fixture.teacher.displayName, fixture.learner.displayName]);
+    expect(JSON.stringify(sent)).not.toContain("@chronoswap");
+    spy.mockRestore();
+  });
+
+  it("Q-21: keeps the summary when only the quiz failed; session stays ENDED for the 48h release", async () => {
+    const fixture = await createFixture();
+    const spy = vi.spyOn(aiServiceClient, "requestSummaryQuiz").mockResolvedValueOnce({
+      status: "PARTIAL",
+      model: "fake-model",
+      summary: "ملخص الجلسة محفوظ رغم فشل الاختبار",
+      keyPoints: ["نقطة 1", "نقطة 2"],
+      exercises: [{ title: "تمرين", description: "اكتب حلقة تطبع الأعداد" }],
+      questions: null,
+    });
+
+    const result = await generateSessionSummaryAndQuiz(fixture.session.id);
+    expect(result.status).toBe("FALLBACK_NOOP");
+
+    const summary = await db.aiSummary.findUniqueOrThrow({ where: { sessionId: fixture.session.id } });
+    expect(summary.status).toBe("SUCCEEDED");
+    expect(summary.model).toBe("fake-model");
+    expect(await db.quiz.findUnique({ where: { sessionId: fixture.session.id } })).toBeNull();
+    const session = await db.session.findUniqueOrThrow({ where: { id: fixture.session.id } });
+    expect(session.status).toBe("ENDED");
+    spy.mockRestore();
   });
 
   it("FR-8.2: preserves summary and exercises in the learner's archive alongside notes and code", async () => {
@@ -319,9 +351,7 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
       ],
     });
 
-    const callGeminiSpy = vi
-      .spyOn(geminiClient, "callGemini")
-      .mockResolvedValueOnce(mockAiResponse);
+    const aiSpy = vi.spyOn(aiServiceClient, "requestSummaryQuiz").mockResolvedValueOnce(aiResult(mockAiResponse));
 
     await generateSessionSummaryAndQuiz(fixture.session.id);
 
@@ -339,7 +369,7 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
     expect(Array.isArray(roomData.aiSummary?.exercises)).toBe(true);
     expect(roomData.isLearner).toBe(true);
 
-    callGeminiSpy.mockRestore();
+    aiSpy.mockRestore();
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -375,7 +405,7 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
       ],
     });
 
-    const spy = vi.spyOn(geminiClient, "callGemini").mockResolvedValueOnce(mockAiResponse);
+    const spy = vi.spyOn(aiServiceClient, "requestSummaryQuiz").mockResolvedValueOnce(aiResult(mockAiResponse));
     await generateSessionSummaryAndQuiz(fixture.session.id);
     spy.mockRestore();
 
@@ -590,7 +620,7 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
         { prompt: "سؤال 3", options: ["أ", "ب"], correctOption: 0 },
       ],
     });
-    const spy = vi.spyOn(geminiClient, "callGemini").mockResolvedValueOnce(mockAiResponse);
+    const spy = vi.spyOn(aiServiceClient, "requestSummaryQuiz").mockResolvedValueOnce(aiResult(mockAiResponse));
     await generateSessionSummaryAndQuiz(fixture.session.id);
     spy.mockRestore();
 

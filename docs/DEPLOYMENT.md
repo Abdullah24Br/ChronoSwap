@@ -6,6 +6,7 @@
 |---|---|---|
 | الموقع | [Vercel](https://vercel.com) | يدعم Next.js مباشرة، و HTTPS تلقائي (NFR-1) |
 | قاعدة البيانات | [Neon](https://neon.tech) | PostgreSQL مستضاف، يدعم إضافة `btree_gist` التي نحتاجها |
+| الذكاء الاصطناعي | Vercel (دالة Python) | خدمة FastAPI + LangGraph في `api/ai.py` تُنشر مع الموقع نفسه (FR-4.3، FR-8.1) |
 | المهام المجدولة | GitHub Actions | خطة Vercel المجانية لا تسمح بمهام كل دقيقة، فيستدعيها GitHub كل 5 دقائق (NFR-3) |
 
 الإعدادات الجاهزة في المستودع: `vercel.json` (الخادم في فرانكفورت قرب قاعدة البيانات)، وسكربت `vercel-build` (يطبّق الـ migrations ثم يبني)، و `.github/workflows/scheduled-jobs.yml`.
@@ -42,7 +43,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 |---|---|
 | `DATABASE_URL` | رابط Neon من الخطوة 1 |
 | `APP_URL` | `https://chronoswap.vercel.app` مؤقتاً، وتُصحَّح بعد أول نشر |
-| `GEMINI_API_KEY` | مفتاح Gemini |
+| `GEMINI_API_KEY` | مفتاح Gemini (تقرؤه خدمة Python فقط) |
+| `AI_SERVICE_TOKEN` | سرّ مشترك بين الموقع وخدمة الذكاء، يولَّد بنفس أمر `CRON_SECRET`. فعّله لـ Production و Preview |
 | `JOBS_INTERVAL_SECONDS` | `0` (المهام يشغّلها GitHub) |
 | `CRON_SECRET` | من الخطوة 2 |
 
@@ -76,6 +78,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    - `SMTP_URL` = `smtps://YOUR_GMAIL%40gmail.com:APP_PASSWORD@smtp.gmail.com:465`
    - `MAIL_FROM` = `ChronoSwap <YOUR_GMAIL@gmail.com>`
 3. أعد النشر.
+
+## 7. خدمة الذكاء (Python + LangGraph)
+
+- تُبنى تلقائياً من `requirements.txt` و `api/ai.py` مع كل نشر، ولا تحتاج خادماً منفصلاً.
+- الموقع يستدعيها على `/api/ai` مع الترويسة `x-ai-token`. بدون `AI_SERVICE_TOKEN` ترفض الخدمة كل طلب (503) ويعمل الموقع بالمسارات البديلة (FR-4.4 / FR-8.5).
+- نسخ Preview محمية بتسجيل دخول Vercel. لكي يستدعي الموقعُ الخدمةَ داخل Preview فعّل **Settings → Deployment Protection → Protection Bypass for Automation**؛ يضيف Vercel المتغير `VERCEL_AUTOMATION_BYPASS_SECRET` ويرسله الموقع تلقائياً.
+- فحص سريع: `GET https://<الموقع>/api/ai` يعيد `{"ok": true, ...}`.
 
 ## التحقق بعد النشر
 

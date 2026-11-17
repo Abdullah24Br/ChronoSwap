@@ -1,0 +1,90 @@
+"""Gemini access for the graphs (FR-4.3, FR-8.1, NFR-5).
+
+One small interface, `JsonLLM`, so the graphs can be tested with a fake model. The real client
+tries a list of models in order (pinned versions get retired, big models are often overloaded)
+and never runs past the request's deadline.
+"""
+
+from __future__ import annotations
+
+import os
+import time
+from dataclasses import dataclass
+from typing import Protocol
+
+# Tried in order when one is overloaded (429 / 5xx) or retired (404). Override with GEMINI_MODEL
+# (comma-separated) without touching the code.
+DEFAULT_MODELS = ("gemini-3.8-flash", "gemini-3.5-flash-lite")
+
+
+class LLMUnavailable(Exception):
+    """No model answered before the deadline. The graph then takes its fallback path."""
+
+
+@dataclass(frozen=True)
+class LLMReply:
+    text: str
+    model: str
+
+
+class JsonLLM(Protocol):
+    def generate_json(self, prompt: str, deadline: float) -> LLMReply:
+        """Return the model's JSON text, or raise LLMUnavailable. `deadline` is time.monotonic()."""
+        ...
+
+
+def configured_models() -> tuple[str, ...]:
+    raw = os.environ.get("GEMINI_MODEL", "")
+    models = tuple(m.strip() for m in raw.split(",") if m.strip())
+    return models or DEFAULT_MODELS
+
+
+class GeminiLLM:
+    """google-genai client. The API key comes from GEMINI_API_KEY and travels in a header."""
+
+    RETRYABLE = {404, 408, 429, 500, 502, 503, 504}
+
+    def __init__(self, api_key: str, models: tuple[str, ...] | None = None) -> None:
+        from google import genai  # imported lazily so tests never need the SDK configured
+
+        self._genai = genai
+        self._client = genai.Client(api_key=api_key)
+        self._models = models or configured_models()
+
+    def generate_json(self, prompt: str, deadline: float) -> LLMReply:
+        from google.genai import errors, types
+
+        last_error: Exception | None = None
+        # Up to three rounds over the model list, with a short pause between rounds.
+        for round_no in range(3):
+            if round_no > 0:
+                pause = float(round_no)
+                if time.monotonic() + pause >= deadline:
+                    break
+                time.sleep(pause)
+            for model in self._models:
+                remaining_ms = int((deadline - time.monotonic()) * 1000)
+                if remaining_ms < 1500:
+                    raise LLMUnavailable("deadline reached") from last_error
+                try:
+                    response = self._client.models.generate_content(
+                        model=model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.2,
+                            response_mime_type="application/json",
+                            http_options=types.HttpOptions(timeout=remaining_ms),
+                        ),
+                    )
+                except errors.APIError as error:
+                    last_error = error
+                    if getattr(error, "code", None) in self.RETRYABLE:
+                        continue  # next model
+                    raise LLMUnavailable(f"{model}: {error}") from error
+                except Exception as error:  # network errors, timeouts
+                    last_error = error
+                    continue
+                text = (response.text or "").strip()
+                if text:
+                    return LLMReply(text=text, model=model)
+        raise LLMUnavailable("no model answered") from last_error

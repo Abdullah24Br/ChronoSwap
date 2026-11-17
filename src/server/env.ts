@@ -8,9 +8,13 @@ const EnvSchema = z.object({
   /** Optional SMTP connection string. Empty → e-mails are printed to the console (dev). */
   SMTP_URL: z.string().optional().default(""),
   MAIL_FROM: z.string().default("ChronoSwap <no-reply@chronoswap.test>"),
-  /** FR-4.3 / FR-8.1 — used from the AI phase onwards. */
+  /** FR-4.3 / FR-8.1: read by the Python AI service (api/ai.py), which calls Gemini. */
   GEMINI_API_KEY: z.string().optional().default(""),
   GEMINI_MODEL: z.string().optional().default(""),
+  /** Shared secret between this app and the Python AI service (NFR-1). Empty = AI disabled, fallbacks only. */
+  AI_SERVICE_TOKEN: z.string().optional().default(""),
+  /** Optional override of the AI service URL (local development: http://127.0.0.1:8000/api/ai). */
+  AI_SERVICE_URL: z.string().optional().default(""),
   /** NFR-3: seconds between in-process job ticks (src/instrumentation.ts). 0 disables them. */
   JOBS_INTERVAL_SECONDS: z.coerce.number().int().min(0).default(60),
   /** NFR-3: bearer token for POST /api/jobs/run (external cron). Empty disables the route. */

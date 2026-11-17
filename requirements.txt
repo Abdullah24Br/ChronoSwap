@@ -1,0 +1,5 @@
+# Python AI service (FR-4.3, FR-8.1): LangGraph graphs that call Gemini, served by FastAPI.
+# Vercel installs this file for the function in api/ai.py.
+fastapi==0.163.2
+langgraph==1.2.22
+google-genai==3.4.0

@@ -47,3 +47,8 @@ next-env.d.ts
 
 # scratch exports
 /ChronoSwap_SRS_IEEE_v4_extracted.txt
+
+# Python AI service
+/.venv
+__pycache__/
+.pytest_cache/

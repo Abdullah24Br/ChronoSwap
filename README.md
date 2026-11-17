@@ -27,7 +27,26 @@ Ambiguous rules follow the defaults in [docs/QUESTIONS.md](docs/QUESTIONS.md) (`
 - **Node.js 20.9+** (developed on 24) and **Git**.
 - **No database install needed.** PostgreSQL 18 runs embedded from `node_modules` (`npm run db:start`).
   - Want a hosted DB instead (e.g. for deployment)? Create a free project on [neon.tech](https://neon.tech) and put its **direct** connection string in `DATABASE_URL`.
-- Optional: a **Gemini API key** (`GEMINI_API_KEY`, from [aistudio.google.com](https://aistudio.google.com)). Without it the app uses the fallback agenda (FR-4.4) and skips the AI summary and quiz (FR-8.5).
+- Optional, for the AI (FR-4.3 / FR-8.1): **Python 3.12+** and a **Gemini API key** (`GEMINI_API_KEY`, from [aistudio.google.com](https://aistudio.google.com)). The AI is a separate Python service (FastAPI + LangGraph, `api/ai.py`). Without it (or without `AI_SERVICE_TOKEN`) the app uses the fallback agenda (FR-4.4) and skips the AI summary and quiz (FR-8.5).
+
+## AI service (Python + LangGraph)
+
+`api/ai.py` exposes `POST /api/ai` with two LangGraph graphs (`api/_ai/`):
+
+- **Agenda** (FR-4.3): scrub personal data → generate → validate (phases, minutes add up to the duration) → repair (sends the errors back, up to 3 attempts) → otherwise the 25/50/25 fallback (FR-4.4).
+- **Summary + quiz** (FR-8.1): scrub → generate → validate summary and the 3 questions → repair → keep the summary without a quiz if only the quiz is broken (Q-21) → otherwise FAILED (FR-8.5).
+
+On Vercel it deploys as a Python function of the same project. Locally:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
+pip install -r requirements-dev.txt
+npm run ai:test                    # pytest, no network
+npm run ai:dev                     # http://127.0.0.1:8000/api/ai (reads .env)
+```
+
+Then set `AI_SERVICE_TOKEN` (any random string, same for both sides) and `AI_SERVICE_URL=http://127.0.0.1:8000/api/ai` in `.env`.
 
 ## First run (Windows / PowerShell, macOS, Linux)
 
@@ -85,6 +104,7 @@ Every job is idempotent and safe to run in parallel. On serverless hosting, set 
 | `npm run db:studio` | Prisma Studio (browse data) |
 | `npm run typecheck` · `lint` · `test` · `test:db` | Checks (`test:db` uses a separate `chronoswap_test` DB) |
 | `npm run check` | All four checks |
+| `npm run ai:dev` · `ai:test` | Python AI service on :8000 · its pytest suite (activate `.venv` first) |
 
 If `npm run build` fails with a Turbopack error about `globals.css`, delete the `.next` folder and build again.
 

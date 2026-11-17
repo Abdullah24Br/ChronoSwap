@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { AgendaPhase, PrismaClient } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 import { DomainError } from "@/server/errors";
-import { callGemini } from "./gemini-client";
+import { requestAgenda } from "./ai-service-client";
 
 // ─────────────────────────────────────────────────────────────
 // Types & Schemas
@@ -89,78 +89,40 @@ export function generateFallbackAgenda(opts: {
 // ─────────────────────────────────────────────────────────────
 
 /**
- * FR-4.3 / FR-8.6: Prompts Gemini API to generate an educational session agenda.
- * Respects strict user privacy (no user personal data is ever sent).
- * Returns null on failure / timeout, allowing safe fallback to FR-4.4.
+ * FR-4.3 / FR-8.6: asks the Python AI service (LangGraph agenda graph: scrub → generate →
+ * validate → repair → fallback) for an agenda. The graph already validates and repairs; this side
+ * validates again before anything is saved (defence in depth) and returns null when the service
+ * is unreachable or fell back, so FR-4.4 applies.
  */
 export async function generateAiAgenda(opts: {
   durationMinutes: number;
   skillNameAr: string;
   categoryNameAr?: string;
   goal: string;
+  /** Removed by the service before the prompt is built (FR-8.6 / Q-22). */
+  participantNames?: string[];
 }): Promise<RawAgendaItem[] | null> {
-  const prompt = `أنت خبير تربوي وتقني لتخطيط الجلسات التعليمية التفاعلية على منصة ChronoSwap.
-المهمة: قم بتوليد خطة أجندة تعليمية احترافية مقسمة لمهام فرعية محددة المدة بالدقائق تناسب بدقة المدة المحجوزة للجلسة.
+  const result = await requestAgenda({
+    durationMinutes: opts.durationMinutes,
+    skill: opts.skillNameAr,
+    category: opts.categoryNameAr ?? "",
+    goal: opts.goal,
+    participantNames: opts.participantNames ?? [],
+  });
+  if (!result || result.source !== "AI") return null;
 
-معلومات الجلسة (محتوى تعليمي بحت):
-- المهارة: ${opts.skillNameAr} ${opts.categoryNameAr ? `(التصنيف: ${opts.categoryNameAr})` : ""}
-- هدف المتعلم: ${opts.goal}
-- إجمالي مدة الجلسة: ${opts.durationMinutes} دقيقة
-
-شروط الإخراج الصارمة:
-1. المجموع الكلي للدقائق (plannedMinutes) لجميع المهام يجب أن يساوي بالضبط ${opts.durationMinutes} دقيقة.
-2. عدد المهام بين 3 إلى 5 مهام واضحة ومحددة.
-3. توزيع المراحل (phase) يجب أن يغطي الأنواع التالية بدقة:
-   - "THEORY": للمفاهيم والشرح
-   - "PRACTICE": للتطبيق العملي وكتابة الأكواد/التدريب
-   - "REVIEW": للمراجعة وتلخيص الأفكار
-4. الصياغة باللغة العربية الواضحة والمشجعة.
-5. أخرج فقط JSON Array صالح بدون أي نصوص تمهيدية، وفق هذا المخطط:
-[
-  {
-    "title": "عنوان المهمة الفرعية",
-    "details": "وصف تفصيلي لما سيتم إنجازه في هذه المهمة",
-    "phase": "THEORY" | "PRACTICE" | "REVIEW",
-    "plannedMinutes": 20
-  }
-]`;
-
-  try {
-    const rawResponse = await callGemini(prompt);
-    if (!rawResponse) return null;
-
-    // Parse JSON
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(rawResponse);
-    } catch {
-      // In case wrapped in markdown codeblock ```json ... ```
-      const cleaned = rawResponse.replace(/```(?:json)?/g, "").replace(/```/g, "").trim();
-      parsed = JSON.parse(cleaned);
-    }
-
-    const validated = aiAgendaSchema.safeParse(parsed);
-    if (!validated.success) {
-      console.warn("[Agenda Service] AI response failed schema validation:", validated.error);
-      return null;
-    }
-
-    const items = validated.data;
-    // Normalize planned minutes so total equals durationMinutes exactly
-    const currentSum = items.reduce((acc, it) => acc + it.plannedMinutes, 0);
-    const diff = opts.durationMinutes - currentSum;
-    if (diff !== 0 && items.length > 0) {
-      const last = items[items.length - 1];
-      if (last.plannedMinutes + diff > 0) {
-        last.plannedMinutes += diff;
-      }
-    }
-
-    return items;
-  } catch (err) {
-    console.warn("[Agenda Service] AI generation error:", err);
+  const validated = aiAgendaSchema.safeParse(result.items);
+  if (!validated.success) {
+    console.warn("[Agenda Service] AI agenda failed validation:", validated.error.issues);
     return null;
   }
+  const items = validated.data;
+  const total = items.reduce((acc, it) => acc + it.plannedMinutes, 0);
+  if (total !== opts.durationMinutes) {
+    console.warn(`[Agenda Service] AI agenda totals ${total} min, expected ${opts.durationMinutes}`);
+    return null;
+  }
+  return items;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -180,6 +142,8 @@ export async function generateAndSaveSessionAgenda(
     include: {
       skill: { include: { category: true } },
       agendaTasks: { orderBy: { position: "asc" } },
+      teacher: { select: { displayName: true } },
+      learner: { select: { displayName: true } },
     },
   });
 
@@ -198,6 +162,7 @@ export async function generateAndSaveSessionAgenda(
     skillNameAr: session.skill.nameAr,
     categoryNameAr: session.skill.category.nameAr,
     goal: session.goal,
+    participantNames: [session.teacher.displayName, session.learner.displayName],
   });
 
   let source: "AI" | "FALLBACK" = "AI";

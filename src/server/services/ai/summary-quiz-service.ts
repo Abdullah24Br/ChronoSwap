@@ -5,13 +5,13 @@ import { db } from "@/server/db";
 import { DomainError } from "@/server/errors";
 import { withWalletTransaction } from "@/server/services/wallet/ledger";
 import { releaseSessionEscrow } from "@/server/services/wallet/wallet-service";
-import { callGemini } from "./gemini-client";
+import { requestSummaryQuiz, type SummaryQuizRequest } from "./ai-service-client";
 
 // ─────────────────────────────────────────────────────────────
 // FR-8.1 / FR-8.6: Types & Zod Schemas
 // ─────────────────────────────────────────────────────────────
 
-export const aiSummaryQuizSchema = z.object({
+const aiSummaryPartShape = {
   summary: z.string().trim().min(10),
   keyPoints: z.array(z.string().trim()).min(2).max(8),
   exercises: z.array(
@@ -20,6 +20,13 @@ export const aiSummaryQuizSchema = z.object({
       description: z.string().trim().min(5),
     }),
   ).min(1).max(5),
+};
+
+/** Q-21: the summary part alone (kept when the quiz could not be made). */
+export const aiSummaryPartSchema = z.object(aiSummaryPartShape);
+
+export const aiSummaryQuizSchema = z.object({
+  ...aiSummaryPartShape,
   questions: z.array(
     z.object({
       prompt: z.string().trim().min(5),
@@ -33,59 +40,32 @@ export const aiSummaryQuizSchema = z.object({
 export type AiSummaryQuizOutput = z.infer<typeof aiSummaryQuizSchema>;
 
 // ─────────────────────────────────────────────────────────────
-// Prompt Builder (FR-8.1 & FR-8.6 Strict Privacy)
+// Request builder (FR-8.1 & FR-8.6): only educational content + names to be removed
 // ─────────────────────────────────────────────────────────────
 
-export function buildSummaryQuizPrompt(opts: {
+/**
+ * FR-8.6 / Q-22: the payload for the Python summary graph. Only educational content goes in the
+ * content fields; participant names travel separately so the graph's first node can strip them
+ * from the goal, notes and code before anything reaches Gemini. No e-mails or ids are sent.
+ */
+export function buildSummaryQuizInput(opts: {
   skillName: string;
   categoryName?: string;
   goal: string;
   tickedTasks: string[];
   notes?: string;
   code?: string;
-}): string {
-  // Enforce FR-8.6: only educational content is included, strictly NO names, emails, or personal IDs
-  return `
-أنت خبير تعليمي ذكي في منصة ChronoSwap لتبادل المهارات التعليمية.
-المطلوب منك تحليل مخرجات جلسة تعليمية منتهية وتوليد:
-1. ملخص بالنقاط الأساسية (keyPoints) وملخص عام (summary) للجلسة.
-2. تمارين وتطبيقات مقترحة (exercises) ليرسخ المتعلم ما تعلمه.
-3. اختبار قصير ودقيق من 3 أسئلة اختيار من متعدد (questions) لقياس استيعاب المتعلم للمحتوى المشروح.
-
-بيانات الجلسة التعليمية:
-- المهارة: ${opts.skillName} ${opts.categoryName ? `(${opts.categoryName})` : ""}
-- الهدف من الجلسة: ${opts.goal}
-- المهام المنجزة من الأجندة:
-${opts.tickedTasks.length > 0 ? opts.tickedTasks.map((t, i) => `  ${i + 1}. ${t}`).join("\n") : "  (لم يتم تدوين مهام تفصيلية)"}
-
-- ملاحظات الشرح من الغرفة:
-${opts.notes?.trim() ? opts.notes.trim().slice(0, 3000) : "  (لا توجد ملاحظات إضافية)"}
-
-- الأكواد البرمجية المشتركة:
-${opts.code?.trim() ? `\`\`\`\n${opts.code.trim().slice(0, 3000)}\n\`\`\`` : "  (لا توجد أكواد برمجية)"}
-
-القواعد الصارمة:
-1. يجب أن تكون الأسئلة مستندة بدقة إلى ما تم شرحه والمهام المنجزة في الجلسة.
-2. يجب أن يحتوي الاختبار على 3 أسئلة بالضبط (length = 3).
-3. لكل سؤال: prompt (نص السؤال)، options (قائمة من 3 إلى 4 خيارات نصية واضحة)، correctOption (رقم الفهرس الصحيح من 0 إلى طول الخيارات - 1)، و explanation (شرح موجز لسبب صحة الإجابة).
-4. الرد يجب أن يكون بصيغة JSON فقط متوافقاً مع المخطط التالي تماماً:
-{
-  "summary": "نص الملخص الشامل باللغة العربية...",
-  "keyPoints": ["نقطة أساسية 1", "نقطة أساسية 2", "نقطة أساسية 3"],
-  "exercises": [
-    { "title": "عنوان التمرين", "description": "وصف التمرين العملي المطلوب من المتعلم تطبيقه" }
-  ],
-  "questions": [
-    {
-      "prompt": "نص السؤال الأول؟",
-      "options": ["الخيار أ", "الخيار ب", "الخيار ج", "الخيار د"],
-      "correctOption": 0,
-      "explanation": "شرح الإجابة الصحيحة"
-    },
-    ... (3 أسئلة بالضبط)
-  ]
-}
-`.trim();
+  participantNames?: string[];
+}): SummaryQuizRequest {
+  return {
+    skill: opts.skillName,
+    category: opts.categoryName ?? "",
+    goal: opts.goal,
+    tickedTasks: opts.tickedTasks,
+    notes: (opts.notes ?? "").slice(0, 20000),
+    code: (opts.code ?? "").slice(0, 20000),
+    participantNames: opts.participantNames ?? [],
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -121,6 +101,8 @@ export async function generateSessionSummaryAndQuiz(
       workspace: true,
       aiSummary: true,
       quiz: true,
+      teacher: { select: { displayName: true } },
+      learner: { select: { displayName: true } },
     },
   });
 
@@ -143,24 +125,20 @@ export async function generateSessionSummaryAndQuiz(
     .filter((t) => t.isDone)
     .map((t) => `${t.title}${t.details ? `: ${t.details}` : ""}`);
 
-  const prompt = buildSummaryQuizPrompt({
+  const input = buildSummaryQuizInput({
     skillName: session.skill.nameAr,
     categoryName: session.skill.category?.nameAr,
     goal: session.goal,
     tickedTasks,
     notes: session.workspace?.notes,
     code: session.workspace?.code,
+    participantNames: [session.teacher.displayName, session.learner.displayName],
   });
 
-  // Call Gemini (NFR-5 timeout: 30,000ms)
-  let rawJson: string | null = null;
-  try {
-    rawJson = await callGemini(prompt);
-  } catch {
-    rawJson = null;
-  }
+  // Python LangGraph service (NFR-5: 30 s cap on this side, the graph stops earlier)
+  const result = await requestSummaryQuiz(input);
 
-  if (!rawJson) {
+  if (!result || result.status === "FAILED") {
     // FR-8.5 Fallback: Mark AI summary as FAILED, session remains in ENDED
     await client.aiSummary.upsert({
       where: { sessionId },
@@ -182,11 +160,41 @@ export async function generateSessionSummaryAndQuiz(
     };
   }
 
-  // Parse and validate with Zod
+  // Q-21: the graph kept a valid summary but could not produce a valid quiz. Save the summary
+  // (FR-8.2) and leave the session ENDED: no quiz, release after 48h (FR-8.5).
+  if (result.status === "PARTIAL") {
+    const part = aiSummaryPartSchema.safeParse(result);
+    if (part.success) {
+      await client.aiSummary.upsert({
+        where: { sessionId },
+        create: {
+          sessionId,
+          status: "SUCCEEDED",
+          summary: part.data.summary,
+          keyPoints: part.data.keyPoints,
+          exercises: part.data.exercises,
+          model: result.model,
+          completedAt: now,
+          errorMessage: "تعذّر توليد اختبار صالح، فحُفظ الملخص دون اختبار (Q-21)",
+        },
+        update: {
+          status: "SUCCEEDED",
+          summary: part.data.summary,
+          keyPoints: part.data.keyPoints,
+          exercises: part.data.exercises,
+          model: result.model,
+          completedAt: now,
+          errorMessage: "تعذّر توليد اختبار صالح، فحُفظ الملخص دون اختبار (Q-21)",
+        },
+      });
+      return { success: false, status: "FALLBACK_NOOP", error: "حُفظ الملخص دون اختبار (FR-8.5 / Q-21)" };
+    }
+  }
+
+  // Validate again with Zod before saving (defence in depth)
   let parsed: AiSummaryQuizOutput;
   try {
-    const rawData = JSON.parse(rawJson);
-    parsed = aiSummaryQuizSchema.parse(rawData);
+    parsed = aiSummaryQuizSchema.parse(result);
   } catch (err: unknown) {
     await client.aiSummary.upsert({
       where: { sessionId },
@@ -219,7 +227,7 @@ export async function generateSessionSummaryAndQuiz(
         summary: parsed.summary,
         keyPoints: parsed.keyPoints,
         exercises: parsed.exercises,
-        model: "gemini-2.5-flash",
+        model: result.model,
         completedAt: now,
       },
       update: {
@@ -227,7 +235,7 @@ export async function generateSessionSummaryAndQuiz(
         summary: parsed.summary,
         keyPoints: parsed.keyPoints,
         exercises: parsed.exercises,
-        model: "gemini-2.5-flash",
+        model: result.model,
         completedAt: now,
         errorMessage: null,
       },

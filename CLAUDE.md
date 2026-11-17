@@ -50,7 +50,7 @@ These rules apply to every phase. If a request conflicts with them, raise it bef
 
 - Business logic lives in `src/server/services/<area>/*` (pure domain rules in `src/server/domain/*`). UI components and pages call services and never contain business rules or Prisma queries for mutations.
 - `src/lib/*` holds code shared by client and server (no Node or DB imports). `src/components/ui/*` holds the design-system primitives.
-- AI (Gemini, FR-4.3 / FR-8.1) is called only from `src/server/services/ai/*`, with a 30s timeout and the fallback paths (FR-4.4 / FR-8.5). Send only educational content, never names or e-mails (FR-8.6).
+- AI (FR-4.3 / FR-8.1) lives in the **Python** service `api/ai.py` (FastAPI + **LangGraph** graphs in `api/_ai/*`, Gemini via `google-genai`, tests in `tests/ai/`, `npm run ai:test`). The app calls it only through `src/server/services/ai/ai-service-client.ts` (`x-ai-token` = `AI_SERVICE_TOKEN`), keeps the 30s cap (NFR-5) and the fallback paths (FR-4.4 / FR-8.5), and re-validates every answer with zod. Send only educational content; participant names are sent only so the graph's first node can strip them (FR-8.6 / Q-22).
 - Time-based jobs (NFR-3: auto-reject, no-show, 48h release) must be idempotent and safe to run concurrently.
 
 ## Traceability

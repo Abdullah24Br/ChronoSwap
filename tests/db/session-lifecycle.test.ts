@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/server/db";
-import * as geminiClient from "@/server/services/ai/gemini-client";
+import * as aiServiceClient from "@/server/services/ai/ai-service-client";
 import { toggleAgendaTask } from "@/server/services/ai/agenda-service";
 import { submitQuizAttempt } from "@/server/services/ai/summary-quiz-service";
 import { acceptSessionRequest, requestSession } from "@/server/services/sessions/booking-service";
@@ -112,7 +112,7 @@ describe("A direct session from request to archive (end to end)", () => {
     }
 
     // FR-6.1: complete; FR-8.1 summary + quiz are generated in the background (mocked AI)
-    const spy = vi.spyOn(geminiClient, "callGemini").mockResolvedValue(AI_RESPONSE);
+    const spy = vi.spyOn(aiServiceClient, "requestSummaryQuiz").mockResolvedValue({ status: "AI", model: "fake-model", ...JSON.parse(AI_RESPONSE) });
     const ended = await completeSessionByParticipant(teacher.id, requested.id, db, new Date(start.getTime() + 50 * MINUTE));
     expect(ended.status).toBe("ENDED");
 

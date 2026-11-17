@@ -18,6 +18,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "ai:dev": "python -m uvicorn api.ai:app --port 8000 --env-file .env",
+    "ai:test": "python -m pytest",
     "postinstall": "prisma generate"
   },
   "dependencies": {
