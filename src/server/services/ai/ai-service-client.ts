@@ -78,7 +78,11 @@ async function post(task: "agenda" | "summary_quiz", input: object): Promise<Rec
       cache: "no-store",
     });
     if (!res.ok) {
-      console.warn(`[AI] service returned ${res.status} for ${task}`);
+      // A 401 from FastAPI is JSON ({"detail": ...}: token mismatch); one from Vercel's preview
+      // protection is an HTML page (enable "Protection Bypass for Automation").
+      const body = (await res.text().catch(() => "")).slice(0, 120).replace(/\s+/g, " ");
+      const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ? "bypass header sent" : "no bypass secret";
+      console.warn(`[AI] service returned ${res.status} for ${task} (${bypass}): ${body}`);
       return null;
     }
     return (await res.json()) as Record<string, unknown>;
