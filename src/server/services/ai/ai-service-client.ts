@@ -95,6 +95,7 @@ async function post(task: "agenda" | "summary_quiz", input: object): Promise<Rec
 export async function requestAgenda(input: AgendaRequest): Promise<AgendaResult | null> {
   const res = await post("agenda", input);
   if (!res || (res.source !== "AI" && res.source !== "FALLBACK")) return null;
+  if (res.source === "FALLBACK") console.warn(`[AI] agenda graph fell back after ${res.attempts} attempt(s)`);
   return {
     source: res.source,
     model: typeof res.model === "string" ? res.model : null,
@@ -107,6 +108,7 @@ export async function requestAgenda(input: AgendaRequest): Promise<AgendaResult 
 export async function requestSummaryQuiz(input: SummaryQuizRequest): Promise<SummaryQuizResult | null> {
   const res = await post("summary_quiz", input);
   if (!res || (res.status !== "AI" && res.status !== "PARTIAL" && res.status !== "FAILED")) return null;
+  if (res.status !== "AI") console.warn(`[AI] summary graph ended ${res.status} after ${res.attempts} attempt(s)`);
   const summary = (res.summary ?? null) as Record<string, unknown> | null;
   return {
     status: res.status,

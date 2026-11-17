@@ -19,7 +19,7 @@ from typing import Any, Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from .llm import JsonLLM, LLMUnavailable
+from .llm import JsonLLM, LLMUnavailable, log
 from .privacy import scrub
 
 QUIZ_QUESTIONS = 3
@@ -158,7 +158,8 @@ def build_summary_graph(llm: JsonLLM):
     def generate_node(state: SummaryState) -> SummaryState:
         try:
             reply = llm.generate_json(build_prompt(state), state["deadline"])
-        except LLMUnavailable:
+        except LLMUnavailable as error:
+            log.warning("[AI] model unavailable: %s", error)
             return {"raw": None, "attempts": MAX_ATTEMPTS, "errors": ["النموذج غير متاح"]}
         return {"raw": reply.text, "model": reply.model, "attempts": state.get("attempts", 0) + 1}
 
@@ -186,6 +187,7 @@ def build_summary_graph(llm: JsonLLM):
     def route(state: SummaryState) -> str:
         if not state.get("errors") and state.get("summary") and state.get("questions"):
             return "finalize"
+        log.warning("[AI] summary attempt %s rejected: %s", state.get("attempts", 0), "; ".join(state.get("errors") or [])[:300])
         enough_time = state["deadline"] - time.monotonic() > 4
         if state.get("attempts", 0) < MAX_ATTEMPTS and enough_time:
             return "repair"

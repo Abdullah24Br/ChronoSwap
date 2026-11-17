@@ -7,6 +7,7 @@ and never runs past the request's deadline.
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from dataclasses import dataclass
@@ -15,6 +16,8 @@ from typing import Protocol
 # Tried in order when one is overloaded (429 / 5xx) or retired (404). Override with GEMINI_MODEL
 # (comma-separated) without touching the code.
 DEFAULT_MODELS = ("gemini-3.8-flash", "gemini-3.5-flash-lite")
+
+log = logging.getLogger("chronoswap.ai")
 
 
 class LLMUnavailable(Exception):
@@ -78,11 +81,13 @@ class GeminiLLM:
                     )
                 except errors.APIError as error:
                     last_error = error
+                    log.warning("[AI] %s answered %s: %s", model, getattr(error, "code", "?"), str(error)[:300])
                     if getattr(error, "code", None) in self.RETRYABLE:
                         continue  # next model
                     raise LLMUnavailable(f"{model}: {error}") from error
                 except Exception as error:  # network errors, timeouts
                     last_error = error
+                    log.warning("[AI] %s failed: %s: %s", model, type(error).__name__, str(error)[:300])
                     continue
                 text = (response.text or "").strip()
                 if text:
