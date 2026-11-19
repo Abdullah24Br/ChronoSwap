@@ -67,7 +67,8 @@ export default async function SessionRoomPage({ params }: SessionRoomPageProps) 
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <SessionRoom initialData={sessionData} currentUserId={user.id} />
+      {/* key: moving from one room to another starts a fresh room, never the previous one's state. */}
+      <SessionRoom key={sessionData.id} initialData={sessionData} currentUserId={user.id} />
     </main>
   );
 }

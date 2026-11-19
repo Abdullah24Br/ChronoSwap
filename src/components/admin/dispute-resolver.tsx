@@ -6,6 +6,8 @@ import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isInAttendanceWindow } from "@/lib/attendance";
+import { SESSION_STATUS_META } from "@/lib/session-status";
 import { formatDateTime } from "@/lib/time";
 import { resolveDisputeAction } from "@/server/actions/admin";
 import type { getDisputeEvidence } from "@/server/services/admin/disputes-admin-service";
@@ -260,7 +262,11 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
                 <p className="text-xs text-muted text-center py-4">لم يُسجل دخول أي طرف.</p>
               ) : (
                 <div className="space-y-2">
-                  {session.attendance.map((log) => (
+                  {session.attendance.map((log) => {
+                    // Q-8: only an entry inside the attendance window counts; earlier visits are
+                    // shown apart so they are not mistaken for attending the session.
+                    const counts = log.event === "JOIN" && isInAttendanceWindow(session.startAt, log.at);
+                    return (
                     <div
                       key={log.id}
                       className="flex items-center justify-between p-2 rounded-lg bg-surface border border-line text-xs"
@@ -268,19 +274,24 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
                       <div className="flex items-center gap-2">
                         <span
                           className={`size-2 rounded-full ${
-                            log.event === "JOIN" ? "bg-success" : "bg-danger"
+                            log.event !== "JOIN" ? "bg-danger" : counts ? "bg-success" : "bg-line-strong"
                           }`}
                         />
                         <strong className="text-fg">{log.user.displayName}</strong>
                         <span className="text-muted">
-                          {log.event === "JOIN" ? "انضم إلى الغرفة" : "غادر الغرفة"}
+                          {log.event !== "JOIN"
+                            ? "غادر الغرفة"
+                            : counts
+                              ? "حضر (ضمن وقت الجلسة)"
+                              : "فتح الغرفة خارج وقت الحضور (لا يُحتسب حضوراً)"}
                         </span>
                       </div>
                       <span className="font-mono text-[0.65rem] text-muted">
                         {formatDateTime(log.at, "Asia/Damascus")}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -435,9 +446,9 @@ export function DisputeResolver({ dispute }: DisputeResolverProps) {
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-[0.7rem] text-muted">
-                    <span>{evt.fromStatus || "START"}</span>
+                    <span title={evt.fromStatus ?? undefined}>{evt.fromStatus ? SESSION_STATUS_META[evt.fromStatus].label : "طلب جديد"}</span>
                     <span>&larr;</span>
-                    <strong className="text-fg">{evt.toStatus}</strong>
+                    <strong className="text-fg" title={evt.toStatus}>{SESSION_STATUS_META[evt.toStatus].label}</strong>
                   </div>
                   {evt.note && <p className="text-[0.65rem] text-subtle">{evt.note}</p>}
                 </div>

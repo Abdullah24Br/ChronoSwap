@@ -61,6 +61,14 @@ interface SessionRoomProps {
 export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
   const router = useRouter();
   const [session, setSession] = useState(initialData);
+  // router.refresh() (after complete, rate, report, quiz…) sends new server data as props. Take it,
+  // otherwise the room keeps showing the old status until a full reload. Local text the user is
+  // typing (notes, code) lives in its own state and is not overwritten here.
+  const [serverData, setServerData] = useState(initialData);
+  if (initialData !== serverData) {
+    setServerData(initialData);
+    setSession(initialData);
+  }
   const [isPending, startTransition] = useTransition();
 
   // Active workspace tab: "notes" | "code" | "summary" | "quiz"

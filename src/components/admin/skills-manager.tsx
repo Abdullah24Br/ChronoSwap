@@ -55,7 +55,7 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
   const handleCreateCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!catNameAr.trim() || !catSlug.trim()) {
-      setErrorMessage("الاسم بالعربية والرمز اللطيف مطلوبان");
+      setErrorMessage("الاسم بالعربية والمعرّف (slug) مطلوبان");
       return;
     }
 
@@ -82,7 +82,7 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
 
   const handleCreateSkill = (categoryId: string) => {
     if (!skillNameAr.trim() || !skillSlug.trim()) {
-      setErrorMessage("اسم المهارة والرمز اللطيف مطلوبان");
+      setErrorMessage("اسم المهارة والمعرّف (slug) مطلوبان");
       return;
     }
 
@@ -140,7 +140,7 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
 
   const handleSaveEdit = (draft: EditTarget) => {
     if (draft.nameAr.trim().length < 2 || draft.slug.trim().length < 2) {
-      setErrorMessage("الاسم بالعربية والرمز اللطيف مطلوبان (حرفان على الأقل)");
+      setErrorMessage("الاسم بالعربية والمعرّف (slug) مطلوبان (حرفان على الأقل)");
       return;
     }
     const common = {
@@ -238,7 +238,7 @@ export function SkillsManager({ initialTaxonomy }: SkillsManagerProps) {
                 />
               </div>
               <div>
-                <label className="block text-[0.65rem] text-muted mb-1">الرمز اللطيف (Slug) *</label>
+                <label className="block text-[0.65rem] text-muted mb-1">المعرّف بالإنجليزية (Slug) *</label>
                 <input
                   type="text"
                   placeholder="web-development"
@@ -569,7 +569,7 @@ function EditForm({
           className={field}
         />
         <input
-          aria-label="الرمز اللطيف (Slug)"
+          aria-label="المعرّف بالإنجليزية (Slug)"
           dir="ltr"
           value={draft.slug}
           onChange={(e) => onChange({ ...draft, slug: e.target.value })}

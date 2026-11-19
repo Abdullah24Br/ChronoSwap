@@ -1,4 +1,5 @@
 import type { AttendanceEvent, PrismaClient, SessionStatus } from "@/generated/prisma/client";
+import { isInAttendanceWindow } from "@/lib/attendance";
 import {
   CANCELLATION_CUTOFF_MINUTES,
   NO_SHOW_GRACE_MINUTES,
@@ -277,11 +278,8 @@ export interface RecordAttendanceResult {
  * FR-5.1 / FR-4.6: Records participant entry/exit in the interactive session room.
  * When both teacher and learner join an ACCEPTED session, transitions status to IN_PROGRESS.
  */
-/** Q-8: whether a room entry at `at` counts as attendance for a session starting at `startAt`. */
-export function isInAttendanceWindow(startAt: Date, at: Date): boolean {
-  const graceMs = NO_SHOW_GRACE_MINUTES * 60 * 1000;
-  return at.getTime() >= startAt.getTime() - graceMs && at.getTime() <= startAt.getTime() + graceMs;
-}
+// Q-8: the attendance window rule lives in src/lib so the admin evidence view uses the same one.
+export { isInAttendanceWindow };
 
 export async function recordSessionAttendance(
   userId: string,

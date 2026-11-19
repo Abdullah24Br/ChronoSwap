@@ -90,7 +90,7 @@ export async function createCategory(
   const cleanNameAr = input.nameAr.trim();
 
   if (!cleanNameAr || !cleanSlug) {
-    throw new DomainError("INVALID_INPUT", "الاسم العربي والرمز اللطيف (slug) مطلوبان");
+    throw new DomainError("INVALID_INPUT", "الاسم العربي والمعرّف (slug) مطلوبان");
   }
 
   // Check unique constraints
@@ -101,7 +101,7 @@ export async function createCategory(
   });
 
   if (existing) {
-    throw new DomainError("DUPLICATE_CATEGORY", "يوجد تصنيف آخر بنفس الاسم العربي أو الرمز اللطيف");
+    throw new DomainError("DUPLICATE_CATEGORY", "يوجد تصنيف آخر بنفس الاسم العربي أو المعرّف (slug)");
   }
 
   return client.skillCategory.create({
@@ -148,7 +148,7 @@ export async function updateCategory(
 
   if (input.slug !== undefined) {
     const cleanSlug = input.slug.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!cleanSlug) throw new DomainError("INVALID_INPUT", "الرمز اللطيف مطلوب");
+    if (!cleanSlug) throw new DomainError("INVALID_INPUT", "المعرّف (slug) مطلوب");
     data.slug = cleanSlug;
   }
 
@@ -220,7 +220,7 @@ export async function createSkill(
   const cleanNameAr = input.nameAr.trim();
 
   if (!cleanNameAr || !cleanSlug) {
-    throw new DomainError("INVALID_INPUT", "اسم المهارة بالعربية والرمز اللطيف مطلوبان");
+    throw new DomainError("INVALID_INPUT", "اسم المهارة بالعربية والمعرّف (slug) مطلوبان");
   }
 
   // Check unique constraints: slug globally unique, nameAr unique per category
@@ -229,7 +229,7 @@ export async function createSkill(
   });
 
   if (existingSlug) {
-    throw new DomainError("DUPLICATE_SKILL", "الرمز اللطيف للمهارة مستخدم مسبقاً");
+    throw new DomainError("DUPLICATE_SKILL", "المعرّف (slug) مستخدم لمهارة أخرى");
   }
 
   const existingInCat = await client.skill.findUnique({
@@ -297,7 +297,7 @@ export async function updateSkill(
 
   if (input.slug !== undefined) {
     const cleanSlug = input.slug.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!cleanSlug) throw new DomainError("INVALID_INPUT", "الرمز اللطيف مطلوب");
+    if (!cleanSlug) throw new DomainError("INVALID_INPUT", "المعرّف (slug) مطلوب");
     data.slug = cleanSlug;
   }
 
