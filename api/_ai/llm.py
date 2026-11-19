@@ -19,8 +19,10 @@ from typing import Protocol
 DEFAULT_MODELS = ("gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-flash-lite-latest")
 
 # One overloaded model can hang for 10+ s before answering 503; cap each call so the others still
-# get a turn inside the request budget (NFR-5).
-PER_CALL_SECONDS = 9.0
+# get a turn inside the request budget (NFR-5). Gemini rejects a deadline under 10 s with
+# 400 INVALID_ARGUMENT, so no call is ever sent with less than MIN_CALL_SECONDS.
+PER_CALL_SECONDS = 12.0
+MIN_CALL_SECONDS = 10.0
 
 log = logging.getLogger("chronoswap.ai")
 
@@ -72,7 +74,7 @@ class GeminiLLM:
                 time.sleep(pause)
             for model in self._models:
                 remaining_ms = int((deadline - time.monotonic()) * 1000)
-                if remaining_ms < 1500:
+                if remaining_ms < MIN_CALL_SECONDS * 1000:
                     raise LLMUnavailable("deadline reached") from last_error
                 call_ms = min(remaining_ms, int(PER_CALL_SECONDS * 1000))
                 try:

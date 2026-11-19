@@ -49,6 +49,22 @@ def test_each_call_is_capped_so_others_get_a_turn():
     assert client._client.models.calls[0][1] <= llm_module.PER_CALL_SECONDS * 1000
 
 
+def test_no_call_gets_a_deadline_gemini_would_reject():
+    """Gemini answers 400 INVALID_ARGUMENT to a deadline under 10 s, which looked like a broken key."""
+    client = make(("big", "lite"), {"big": overloaded(), "lite": overloaded()})
+    with pytest.raises(LLMUnavailable):
+        client.generate_json("p", time.monotonic() + 25)
+    timeouts = [ms for _, ms in client._client.models.calls]
+    assert timeouts and all(ms >= 10_000 for ms in timeouts)
+
+
+def test_too_little_time_left_sends_nothing():
+    client = make(("big",), {"big": '{"ok": true}'})
+    with pytest.raises(LLMUnavailable):
+        client.generate_json("p", time.monotonic() + 8)
+    assert client._client.models.calls == []
+
+
 def test_bad_key_stops_at_once(monkeypatch):
     bad_key = errors.ClientError(400, {"error": {"code": 400, "message": "API key not valid", "status": "INVALID_ARGUMENT"}})
     client = make(("big", "lite"), {"big": bad_key, "lite": '{"ok": true}'})
