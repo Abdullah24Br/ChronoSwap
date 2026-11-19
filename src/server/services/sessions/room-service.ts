@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { COMPLETION_THRESHOLD_PERCENT, RELEASE_WINDOW_MINUTES } from "@/lib/rules";
 import { db } from "@/server/db";
+import { normalizeMeetUrl, MEET_URL_ERROR } from "@/lib/meeting-url";
 import { DomainError } from "@/server/errors";
 import { withWalletTransaction } from "@/server/services/wallet/ledger";
 import { generateSessionSummaryAndQuiz } from "@/server/services/ai/summary-quiz-service";
@@ -154,15 +155,16 @@ export async function updateSessionMeetingUrl(
     throw new DomainError("FORBIDDEN", "لا تملك صلاحية تعديل رابط المكالمة");
   }
 
-  const cleanUrl = meetingUrl.trim();
-  if (cleanUrl && !cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
-    throw new DomainError("INVALID_URL", "يجب أن يبدأ رابط المكالمة بـ https:// أو http://");
+  // FR-5.2 / Q-34: only a Google Meet link, and it can be replaced but not removed.
+  const cleanUrl = normalizeMeetUrl(meetingUrl);
+  if (!cleanUrl) {
+    throw new DomainError("INVALID_URL", MEET_URL_ERROR);
   }
 
   return client.session.update({
     where: { id: sessionId },
     data: {
-      meetingUrl: cleanUrl || null,
+      meetingUrl: cleanUrl,
     },
   });
 }

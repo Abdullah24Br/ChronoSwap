@@ -122,7 +122,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     );
 
     // Accept session
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Outsider cannot access
     await expect(getSessionRoomData(session.id, outsider.id)).rejects.toThrow(
@@ -144,7 +144,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
 
   it("automatically records attendance logs and advances to IN_PROGRESS when both enter (FR-5.1)", async () => {
     const { learner, teacher, session } = await createRoomTestFixture();
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Q-8: entering a day early opens the room but is not attendance yet.
     const earlyView = await getSessionRoomData(session.id, learner.id);
@@ -172,7 +172,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
 
   it("manages external meeting URL (Google Meet / Zoom) (FR-5.2)", async () => {
     const { teacher, session } = await createRoomTestFixture();
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Invalid URL rejected
     await expect(
@@ -191,9 +191,30 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     expect(fetched.meetingUrl).toBe("https://meet.google.com/abc-defg-hij");
   });
 
+  it("Q-34: accepting needs a Google Meet link, and the room cannot remove or swap it for another service", async () => {
+    const { teacher, session } = await createRoomTestFixture();
+
+    for (const bad of ["", "   ", "https://zoom.us/j/123456789", "http://meet.google.com/abc-defg-hij", "javascript:alert(1)"]) {
+      await expect(acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: bad })).rejects.toThrow(DomainError);
+    }
+    const stillPending = await db.session.findUniqueOrThrow({ where: { id: session.id } });
+    expect(stillPending.status).toBe("PENDING");
+    expect(stillPending.meetingUrl).toBeNull();
+
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: " https://meet.google.com/xyz-abcd-efg " });
+    const accepted = await db.session.findUniqueOrThrow({ where: { id: session.id } });
+    expect(accepted.status).toBe("ACCEPTED");
+    expect(accepted.meetingUrl).toBe("https://meet.google.com/xyz-abcd-efg");
+
+    await expect(updateSessionMeetingUrl(teacher.id, session.id, "")).rejects.toThrow(DomainError);
+    await expect(updateSessionMeetingUrl(teacher.id, session.id, "https://zoom.us/j/1")).rejects.toThrow(DomainError);
+    const unchanged = await db.session.findUniqueOrThrow({ where: { id: session.id } });
+    expect(unchanged.meetingUrl).toBe("https://meet.google.com/xyz-abcd-efg");
+  });
+
   it("saves notes and code with optimistic concurrency control (FR-5.3)", async () => {
     const { teacher, session } = await createRoomTestFixture();
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Save initial workspace
     const ws1 = await saveSessionWorkspace(teacher.id, {
@@ -229,7 +250,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
 
   it("enforces agenda threshold (50%) to complete session (FR-6.1 & FR-5.4 & FR-4.5)", async () => {
     const { teacher, learner, session } = await createRoomTestFixture();
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Enter room so session becomes IN_PROGRESS
     await getSessionRoomData(session.id, teacher.id, db, session.startAt);
@@ -267,7 +288,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
 
   it("permanently preserves notes and code in learning archive after completion (FR-5.5)", async () => {
     const { teacher, learner, session } = await createRoomTestFixture();
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Save notes & code
     await saveSessionWorkspace(teacher.id, {

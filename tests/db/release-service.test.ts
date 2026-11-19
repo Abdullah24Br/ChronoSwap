@@ -91,7 +91,7 @@ describe("48-Hour Escrow Auto-Release & Safe Fallback (Module 8: FR-8.4, FR-8.5)
       goal: "شرح معمق لـ Server Components و Hooks",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
     await recordSessionAttendance(teacher.id, session.id, "JOIN", db, startAt);
     await recordSessionAttendance(learner.id, session.id, "JOIN", db, startAt);
 

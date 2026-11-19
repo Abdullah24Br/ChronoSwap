@@ -153,6 +153,9 @@ All three already agreed to the cycle, but the exact time still needs agreement.
 ### Q-30 · NFR-4 · Digits `DEFAULT`
 **Default:** Latin digits (`1.5 ساعة`) everywhere, in a monospace face for balances and times. The `TimeAmount` component is the only way balances are rendered.
 
+### Q-34 · FR-5.2 · Is the call link required, and which services? `TEAM DECISION`
+**Decision:** a teacher can only confirm an acceptance with a Google Meet link (`https://meet.google.com/<code>`). The room can replace the link but not clear it or switch to another service. Enforced in `acceptSessionRequest` / `updateSessionMeetingUrl`, not just the UI (`src/lib/meeting-url.ts`).
+
 ### Q-32 · FR-4.1 · Self-booking
 **Answered by design:** a DB CHECK prevents a session whose teacher and learner are the same user.
 

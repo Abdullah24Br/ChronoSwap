@@ -6,6 +6,7 @@ import { FULL_MOTION, REDUCED_MOTION, gsap, useGSAP } from "@/components/motion/
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { MEET_URL_ERROR, MEET_URL_EXAMPLE, normalizeMeetUrl } from "@/lib/meeting-url";
 import { formatDateTime } from "@/lib/time";
 import {
   cancelAcceptedSessionAction,
@@ -103,7 +104,12 @@ export function SessionsDashboard({
   const handleAccept = (sessionId: string) => {
     setActionError(null);
     startTransition(async () => {
-      const meetingUrl = meetingUrlInputs[sessionId] || undefined;
+      // Q-34: the server refuses an acceptance without a Google Meet link; this is only a hint.
+      const meetingUrl = (meetingUrlInputs[sessionId] ?? "").trim();
+      if (!normalizeMeetUrl(meetingUrl)) {
+        setActionError(MEET_URL_ERROR);
+        return;
+      }
       const res = await respondSessionRequestAction({
         sessionId,
         decision: "ACCEPTED",
@@ -329,11 +335,19 @@ export function SessionsDashboard({
                     <div className="rounded-xl bg-success/5 border border-success/30 p-4 space-y-3">
                       <h5 className="font-bold text-xs text-fg flex items-center gap-1.5">
                         <Video className="size-4 text-success" />
-                        <span>رابط مكالمة الجلسة (اختياري)</span>
+                        <span>رابط Google Meet للجلسة</span>
+                        <span className="text-danger" aria-hidden>*</span>
                       </h5>
+                      <p className="text-[0.7rem] leading-relaxed text-muted">
+                        إلزامي لتأكيد القبول. أنشئ اجتماعاً من meet.google.com ← «اجتماع جديد» ← «إنشاء اجتماع لوقت لاحق»، ثم الصق الرابط هنا.
+                      </p>
                       <input
                         type="url"
-                        placeholder="https://meet.google.com/xyz-abcd-efg"
+                        required
+                        aria-required="true"
+                        aria-label="رابط Google Meet للجلسة"
+                        dir="ltr"
+                        placeholder={MEET_URL_EXAMPLE}
                         value={meetingUrlInputs[req.id] || ""}
                         onChange={(e) =>
                           setMeetingUrlInputs({
@@ -356,7 +370,7 @@ export function SessionsDashboard({
                           type="button"
                           variant="primary"
                           size="sm"
-                          disabled={isPending}
+                          disabled={isPending || !normalizeMeetUrl(meetingUrlInputs[req.id])}
                           onClick={() => handleAccept(req.id)}
                         >
                           تأكيد القبول النهائي

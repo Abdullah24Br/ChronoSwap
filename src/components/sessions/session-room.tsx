@@ -8,6 +8,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MEET_URL_EXAMPLE, normalizeMeetUrl } from "@/lib/meeting-url";
 import { COMPLETION_THRESHOLD_PERCENT } from "@/lib/rules";
 import {
   generateSummaryAndQuizAction,
@@ -530,8 +531,8 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
             <h4 className="font-bold text-sm text-fg">رابط الاتصال المرئي المباشر</h4>
             <p className="text-xs text-muted">
               {session.meetingUrl
-                ? "انقر على الزر للانضمام إلى مكالمة الفيديو الخارجية (Google Meet / Zoom)"
-                : "لم يتم تحديد رابط مكالمة بعد، يمكنك إضافة الرابط الآن ليدخل منه الطرفان"}
+                ? "انقر على الزر للانضمام إلى مكالمة Google Meet الخاصة بهذه الجلسة"
+                : "لم يُحدَّد رابط Google Meet بعد، أضفه الآن ليدخل منه الطرفان"}
             </p>
           </div>
         </div>
@@ -565,7 +566,10 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
             <div className="flex items-center gap-2 w-full md:w-auto">
               <input
                 type="url"
-                placeholder="https://meet.google.com/xyz-abc أو رابط Zoom"
+                required
+                dir="ltr"
+                aria-label="رابط Google Meet للجلسة"
+                placeholder={MEET_URL_EXAMPLE}
                 value={meetingUrlInput}
                 onChange={(e) => setMeetingUrlInput(e.target.value)}
                 className="rounded-lg border border-line bg-canvas px-3 py-1.5 text-xs text-fg placeholder:text-muted focus:border-cyan focus:outline-none min-w-[240px]"
@@ -574,7 +578,7 @@ export function SessionRoom({ initialData, currentUserId }: SessionRoomProps) {
                 type="button"
                 variant="primary"
                 size="sm"
-                disabled={isPending}
+                disabled={isPending || !normalizeMeetUrl(meetingUrlInput)}
                 onClick={handleSaveMeetingUrl}
                 className="text-xs"
               >

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { meetUrlSchema } from "@/lib/meeting-url";
 
 // FR-4.1: Booking Request Schema
 export const requestSessionSchema = z.object({
@@ -22,15 +23,18 @@ export const requestSessionSchema = z.object({
 export type RequestSessionInput = z.infer<typeof requestSessionSchema>;
 
 // FR-4.2: Teacher Decision Schema (Accept or Reject)
-export const respondSessionRequestSchema = z.object({
-  sessionId: z.string().uuid("معرف الجلسة غير صالح"),
-  decision: z.enum(["ACCEPTED", "REJECTED"]),
-  meetingUrl: z
-    .string()
-    .url("رابط الاجتماع يجب أن يكون رابطاً صحيحاً (مثال: Google Meet أو Zoom)")
-    .optional()
-    .or(z.literal("")),
-  rejectReason: z.string().max(500, "سبب الرفض لا يتجاوز 500 حرف").optional(),
-});
+// Q-34 / FR-5.2: accepting requires a Google Meet link; rejecting does not.
+export const respondSessionRequestSchema = z.discriminatedUnion("decision", [
+  z.object({
+    sessionId: z.string().uuid("معرف الجلسة غير صالح"),
+    decision: z.literal("ACCEPTED"),
+    meetingUrl: meetUrlSchema,
+  }),
+  z.object({
+    sessionId: z.string().uuid("معرف الجلسة غير صالح"),
+    decision: z.literal("REJECTED"),
+    rejectReason: z.string().max(500, "سبب الرفض لا يتجاوز 500 حرف").optional(),
+  }),
+]);
 
 export type RespondSessionRequestInput = z.infer<typeof respondSessionRequestSchema>;

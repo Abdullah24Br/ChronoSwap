@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { defineAction } from "@/server/action";
 import { getCurrentUser } from "@/server/auth/session";
+import { meetUrlSchema } from "@/lib/meeting-url";
 import { ForbiddenError } from "@/server/errors";
 import {
   completeSessionByParticipant,
@@ -16,7 +17,8 @@ import { expireSessionIfTimedOut } from "@/server/services/sessions/timer-servic
 export const updateMeetingUrlAction = defineAction(
   z.object({
     sessionId: z.string().uuid("معرف الجلسة غير صالح"),
-    meetingUrl: z.string().url("رابط المكالمة غير صالح").or(z.literal("")),
+    // Q-34: the link can be replaced, never removed.
+    meetingUrl: meetUrlSchema,
   }),
   async ({ sessionId, meetingUrl }) => {
     const user = await getCurrentUser();

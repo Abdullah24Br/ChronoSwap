@@ -161,7 +161,7 @@ describe("Teacher Decisions & Auto-Reject (FR-4.2)", () => {
     });
 
     // Teacher accepts Session 1
-    await acceptSessionRequest(teacher.id, { sessionId: s1.id });
+    await acceptSessionRequest(teacher.id, { sessionId: s1.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Session 1 is ACCEPTED
     const updatedS1 = await db.session.findUniqueOrThrow({ where: { id: s1.id } });
@@ -366,7 +366,7 @@ describe("Teacher Decisions & Auto-Reject (FR-4.2)", () => {
 
     // Third party tries to accept
     await expect(
-      acceptSessionRequest(thirdParty.id, { sessionId: session.id }),
+      acceptSessionRequest(thirdParty.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" }),
     ).rejects.toThrow(DomainError);
 
     // Third party tries to reject

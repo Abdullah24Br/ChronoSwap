@@ -6,6 +6,7 @@ import {
   type SessionDuration,
 } from "@/lib/rules";
 import { db } from "@/server/db";
+import { normalizeMeetUrl, MEET_URL_ERROR } from "@/lib/meeting-url";
 import { DomainError } from "@/server/errors";
 import { hasOutstandingDebt } from "@/server/services/barter/barter-service";
 import {
@@ -579,15 +580,21 @@ export async function getOutgoingSessionRequests(
 /**
  * FR-4.2: Teacher accepts a pending session request.
  * - Transitions status from PENDING to ACCEPTED using CAS (compare-and-set).
- * - Optionally stores meetingUrl (FR-5.2).
+ * - Requires a Google Meet link (FR-5.2 / Q-34): the session cannot be confirmed without one.
  * - Logs SessionEvent trigger 'FR-4.2:accept'.
  * - Auto-rejects any other PENDING sessions for teacher or learner that overlap with this accepted session (trigger: 'FR-4.2:slot-taken'), refunding their escrow.
  */
 export async function acceptSessionRequest(
   teacherId: string,
-  opts: { sessionId: string; meetingUrl?: string },
+  opts: { sessionId: string; meetingUrl: string },
   client: PrismaClient = db,
 ) {
+  // Q-34: checked here too, so no caller (action, test, script) can confirm without a link.
+  const meetingUrl = normalizeMeetUrl(opts.meetingUrl);
+  if (!meetingUrl) {
+    throw new DomainError("MEETING_URL_REQUIRED", MEET_URL_ERROR);
+  }
+
   return withWalletTransaction(client, async (tx) => {
     const session = await tx.session.findUnique({
       where: { id: opts.sessionId },
@@ -626,7 +633,7 @@ export async function acceptSessionRequest(
       data: {
         status: "ACCEPTED",
         respondedAt: now,
-        meetingUrl: opts.meetingUrl?.trim() || null,
+        meetingUrl,
       },
     });
 

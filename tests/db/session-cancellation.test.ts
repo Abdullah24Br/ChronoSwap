@@ -99,7 +99,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "تعلم بايثون المتقدم",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Cancel at 24 hours before startAt (isTimely = true)
     const cancelTime = new Date(startAt.getTime() - 24 * 60 * 60 * 1000);
@@ -143,7 +143,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "مراجعة خوارزميات",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     const cancelTime = new Date(startAt.getTime() - 15 * 60 * 60 * 1000); // 15h before start
     const result = await cancelAcceptedSession(
@@ -176,7 +176,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "جلسة برمجية",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Teacher cancels 3 hours before start (< 12h)
     const cancelTime = new Date(startAt.getTime() - 3 * 60 * 60 * 1000);
@@ -216,7 +216,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "جلسة برمجية",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Learner cancels 2 hours before start (< 12h)
     const cancelTime = new Date(startAt.getTime() - 2 * 60 * 60 * 1000);
@@ -262,7 +262,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "تسديد ديون مع الغياب",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Manually add 20 min debt to teacher to test FIFO repayment
     await db.debt.create({
@@ -310,7 +310,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "جلسة لا يحضرها أحد",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Run no-show job at startAt + 16 min
     const jobTime = new Date(startAt.getTime() + 16 * 60 * 1000);
@@ -342,7 +342,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "جلسة يغيب عنها المدرّس",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Learner joins room at startAt + 5 min
     await recordSessionAttendance(
@@ -382,7 +382,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "جلسة يغيب عنها المتعلم",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Teacher joins room at startAt + 3 min
     await recordSessionAttendance(
@@ -422,7 +422,7 @@ describe("Session Cancellation & No-Show Policy (FR-4.5 & FR-4.6)", () => {
       goal: "جلسة تفاعلية بحضور الطرفين",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // Teacher joins at T + 2 min
     const tJoin = await recordSessionAttendance(

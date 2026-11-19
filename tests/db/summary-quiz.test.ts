@@ -99,7 +99,7 @@ describe("AI Summary & Quiz Generation (Module 8: FR-8.1, FR-8.6)", () => {
       goal: "إتقان AsyncIO و Decorators في بايثون",
     });
 
-    await acceptSessionRequest(teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
     await recordSessionAttendance(teacher.id, session.id, "JOIN");
     await recordSessionAttendance(learner.id, session.id, "JOIN");
 

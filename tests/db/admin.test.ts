@@ -225,7 +225,7 @@ describe("Admin Panel & Platform Governance (Module 7: FR-7.1, FR-7.2, FR-7.3)",
       goal: "جلسة للتحكيم الإداري",
     });
 
-    await acceptSessionRequest(fixture.teacher.id, { sessionId: session.id });
+    await acceptSessionRequest(fixture.teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
     await recordSessionAttendance(fixture.teacher.id, session.id, "JOIN", db, startAt);
     await recordSessionAttendance(fixture.nonAdmin.id, session.id, "JOIN", db, startAt);
 

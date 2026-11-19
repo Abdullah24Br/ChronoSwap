@@ -119,6 +119,7 @@ describe("Completion, Rating & Dispute System (Module 6: FR-6.1, FR-6.2, FR-6.4)
 
     await acceptSessionRequest(fixture.teacher.id, {
       sessionId: session.id,
+      meetingUrl: "https://meet.google.com/abc-defg-hij",
     });
 
     // Both join to become IN_PROGRESS

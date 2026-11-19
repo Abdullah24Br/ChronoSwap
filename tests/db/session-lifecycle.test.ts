@@ -94,7 +94,7 @@ describe("A direct session from request to archive (end to end)", () => {
     expect(await wallet(learner.id)).toMatchObject({ availableMinutes: 60, frozenMinutes: 60 });
 
     // FR-4.2: teacher accepts
-    await acceptSessionRequest(teacher.id, { sessionId: requested.id });
+    await acceptSessionRequest(teacher.id, { sessionId: requested.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
     // FR-5.1 / Q-8: both enter the room around the start → IN_PROGRESS
     await getSessionRoomData(requested.id, teacher.id, db, start);
