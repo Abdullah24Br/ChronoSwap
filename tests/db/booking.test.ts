@@ -302,7 +302,7 @@ describe("Session Booking Request (FR-4.1)", () => {
         startAt: overlappingStartAt,
         goal: "محاولة حجز متداخل",
       }),
-    ).rejects.toThrow("المدرّس لديه جلسة أخرى في هذا التوقيت المحدد");
+    ).rejects.toThrow("المدرّس مشغول في هذا الوقت ولديه جلسة أخرى");
   });
 
   it("enforces weekly pair cap of 180 minutes (FR-6.3)", async () => {

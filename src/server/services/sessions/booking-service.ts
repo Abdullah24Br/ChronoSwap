@@ -176,6 +176,33 @@ export async function checkWeeklyPairCap(
 }
 
 /**
+ * The first pending / accepted / running session of `userId` (as teacher or learner) that overlaps
+ * [startAt, endAt), or null.
+ */
+export async function findSessionConflict(
+  userId: string,
+  startAt: Date,
+  endAt: Date,
+  client: PrismaClient | Tx = db,
+) {
+  const conflictStatuses: SessionStatus[] = [
+    "PENDING",
+    "ACCEPTED",
+    "IN_PROGRESS",
+  ];
+
+  return client.session.findFirst({
+    where: {
+      status: { in: conflictStatuses },
+      OR: [{ teacherId: userId }, { learnerId: userId }],
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+    },
+    select: { id: true, teacherId: true, learnerId: true, status: true },
+  });
+}
+
+/**
  * Checks if either participant has an active/pending session conflicting with [startAt, endAt).
  */
 export async function checkSessionConflict(
@@ -184,22 +211,51 @@ export async function checkSessionConflict(
   endAt: Date,
   client: PrismaClient | Tx = db,
 ): Promise<boolean> {
-  const conflictStatuses: SessionStatus[] = [
-    "PENDING",
-    "ACCEPTED",
-    "IN_PROGRESS",
-  ];
+  return (await findSessionConflict(userId, startAt, endAt, client)) !== null;
+}
 
-  const conflict = await client.session.findFirst({
-    where: {
-      status: { in: conflictStatuses },
-      OR: [{ teacherId: userId }, { learnerId: userId }],
-      startAt: { lt: endAt },
-      endAt: { gt: startAt },
-    },
-  });
+/**
+ * FR-4.1: refuses a request that overlaps one of the learner's or the teacher's own sessions, with
+ * a message that says whose calendar is taken. The learner is checked first, so booking the same
+ * teacher twice at the same time says "you already booked this", not "the teacher is busy".
+ */
+async function assertNoBookingConflict(
+  learnerId: string,
+  teacherId: string,
+  startAt: Date,
+  endAt: Date,
+  client: PrismaClient | Tx,
+) {
+  const mine = await findSessionConflict(learnerId, startAt, endAt, client);
+  if (mine) {
+    if (mine.learnerId === learnerId && mine.teacherId === teacherId) {
+      throw new DomainError(
+        "ALREADY_BOOKED",
+        mine.status === "PENDING"
+          ? "أرسلت مسبقاً طلب حجز مع هذا المدرّس في هذا الوقت، وهو بانتظار ردّه"
+          : "لديك جلسة محجوزة مسبقاً مع هذا المدرّس في هذا الوقت",
+      );
+    }
+    throw new DomainError("LEARNER_CONFLICT", "لديك جلسة أخرى في هذا التوقيت المحدد");
+  }
 
-  return conflict !== null;
+  if (await checkSessionConflict(teacherId, startAt, endAt, client)) {
+    throw new DomainError(
+      "TEACHER_CONFLICT",
+      "المدرّس مشغول في هذا الوقت ولديه جلسة أخرى، اختر وقتاً آخر",
+    );
+  }
+}
+
+/**
+ * Serialises booking requests that involve the same people: two clicks (or two tabs) cannot both
+ * pass the conflict check before either is saved. Locks in id order, so two users booking each
+ * other never deadlock. Held until the transaction ends.
+ */
+async function lockBookingParticipants(tx: Tx, ...userIds: string[]) {
+  for (const id of [...new Set(userIds)].sort()) {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))::text AS locked`;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -293,32 +349,8 @@ export async function requestSession(
     );
   }
 
-  // 7. Check for scheduling conflicts (no double booking)
-  const teacherHasConflict = await checkSessionConflict(
-    input.teacherId,
-    startAt,
-    endAt,
-    client,
-  );
-  if (teacherHasConflict) {
-    throw new DomainError(
-      "TEACHER_CONFLICT",
-      "المدرّس لديه جلسة أخرى في هذا التوقيت المحدد",
-    );
-  }
-
-  const learnerHasConflict = await checkSessionConflict(
-    learnerId,
-    startAt,
-    endAt,
-    client,
-  );
-  if (learnerHasConflict) {
-    throw new DomainError(
-      "LEARNER_CONFLICT",
-      "لديك جلسة أخرى في هذا التوقيت المحدد",
-    );
-  }
+  // 7. Check for scheduling conflicts (no double booking). Checked again under a lock below.
+  await assertNoBookingConflict(learnerId, input.teacherId, startAt, endAt, client);
 
   // 8. Check weekly pair cap (FR-6.3)
   const capCheck = await checkWeeklyPairCap(
@@ -410,6 +442,9 @@ export async function requestSession(
 
     // Create barter session (no escrow freeze)
     const barterSession = await client.$transaction(async (tx) => {
+      // FR-4.1: re-check under the participants' lock (a double click cannot book twice).
+      await lockBookingParticipants(tx, learnerId, input.teacherId);
+      await assertNoBookingConflict(learnerId, input.teacherId, startAt, endAt, tx);
       const session = await tx.session.create({
         data: {
           kind: "BARTER",
@@ -455,6 +490,9 @@ export async function requestSession(
 
   // If DIRECT session: Requires Escrow Freeze (FR-2.2)
   const directSession = await withWalletTransaction(client, async (tx) => {
+    // FR-4.1: re-check under the participants' lock (a double click cannot book twice).
+    await lockBookingParticipants(tx, learnerId, input.teacherId);
+    await assertNoBookingConflict(learnerId, input.teacherId, startAt, endAt, tx);
     const session = await tx.session.create({
       data: {
         kind: "DIRECT",
