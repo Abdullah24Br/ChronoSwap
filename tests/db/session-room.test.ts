@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { db } from "@/server/db";
-import { DomainError } from "@/server/errors";
+import { DomainError, RoomNotOpenError } from "@/server/errors";
 import { acceptSessionRequest, requestSession } from "@/server/services/sessions/booking-service";
 import {
   completeSessionByParticipant,
   getSessionRoomData,
+  getSessionWaitingInfo,
   saveSessionWorkspace,
   updateSessionMeetingUrl,
 } from "@/server/services/sessions/room-service";
@@ -146,9 +147,9 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     const { learner, teacher, session } = await createRoomTestFixture();
     await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
 
-    // Q-8: entering a day early opens the room but is not attendance yet.
-    const earlyView = await getSessionRoomData(session.id, learner.id);
-    expect(earlyView.status).toBe("ACCEPTED");
+    // Q-8 (changed): a day early the room is still closed, and nothing is logged.
+    await expect(getSessionRoomData(session.id, learner.id)).rejects.toBeInstanceOf(RoomNotOpenError);
+    expect(await db.attendanceLog.count({ where: { sessionId: session.id } })).toBe(0);
 
     // Teacher enters room first, at the start time
     const teacherView = await getSessionRoomData(session.id, teacher.id, db, session.startAt);
@@ -212,6 +213,30 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
     expect(unchanged.meetingUrl).toBe("https://meet.google.com/xyz-abcd-efg");
   });
 
+  it("Q-8: the room opens exactly 15 minutes before the start; notes cannot be saved before that", async () => {
+    const { teacher, learner, session } = await createRoomTestFixture();
+    await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
+    const opens = new Date(session.startAt.getTime() - 15 * 60_000);
+
+    const closed = await getSessionRoomData(session.id, learner.id, db, new Date(opens.getTime() - 1000)).catch((e) => e);
+    expect(closed).toBeInstanceOf(RoomNotOpenError);
+    expect((closed as RoomNotOpenError).opensAt.getTime()).toBe(opens.getTime());
+
+    await expect(
+      saveSessionWorkspace(teacher.id, { sessionId: session.id, notes: "قبل الموعد", code: "" }, db, new Date(opens.getTime() - 1000)),
+    ).rejects.toBeInstanceOf(RoomNotOpenError);
+
+    const open = await getSessionRoomData(session.id, learner.id, db, opens);
+    expect(open.status).toBe("ACCEPTED");
+
+    const waiting = await getSessionWaitingInfo(session.id, learner.id);
+    expect(waiting.opensAt.getTime()).toBe(opens.getTime());
+    expect(waiting.partnerName).toBe(teacher.displayName);
+    await expect(getSessionWaitingInfo(session.id, (await db.user.create({
+      data: { email: `outsider-${Date.now()}@chronoswap.test`, passwordHash: "x", displayName: "غريب" },
+    })).id)).rejects.toThrow(DomainError);
+  });
+
   it("saves notes and code with optimistic concurrency control (FR-5.3)", async () => {
     const { teacher, session } = await createRoomTestFixture();
     await acceptSessionRequest(teacher.id, { sessionId: session.id, meetingUrl: "https://meet.google.com/abc-defg-hij" });
@@ -222,7 +247,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
       notes: "شرح معمق لدوال Next.js",
       code: "export default function Page() { return <h1>Hello</h1>; }",
       codeLanguage: "typescript",
-    });
+    }, db, session.startAt);
 
     expect(ws1.notes).toContain("Next.js");
     expect(ws1.codeLanguage).toBe("typescript");
@@ -234,7 +259,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
       notes: "شرح معمق لدوال Next.js مع إضافة أمثلة",
       code: "export default function Page() { return <h1>Updated</h1>; }",
       expectedRevision: 1,
-    });
+    }, db, session.startAt);
     expect(ws2.revision).toBe(2);
 
     // Attempting edit with stale expected revision (1 instead of 2) throws concurrency error
@@ -244,7 +269,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
         notes: "تعديل متضارب",
         code: "// conflict",
         expectedRevision: 1,
-      }),
+      }, db, session.startAt),
     ).rejects.toThrow("تم تعديل مساحة العمل من الطرف الآخر");
   });
 
@@ -296,7 +321,7 @@ describe("Interactive Session Room & Collaborative Workspace (Module 5: FR-5.1 t
       notes: "ملخص محفوظ للأبد في أرشيف المتعلم",
       code: "const sum = (a, b) => a + b;",
       codeLanguage: "javascript",
-    });
+    }, db, session.startAt);
 
     // Both join at the start time (Q-8), tick every task, then complete
     await getSessionRoomData(session.id, teacher.id, db, session.startAt);

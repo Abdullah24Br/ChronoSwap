@@ -64,7 +64,7 @@ The clause "(مع حضور المدرّس)" naturally fits the "didn't join the 
 
 ### Q-8 ⭐ · FR-5.1 / FR-4.6 · When does the room open, and which entries count as attendance? `CONFIRMED`
 If the room opens at acceptance (needed to paste the Meet link), a teacher who opens it two days early shouldn't count as "present".
-**Default:** the room is accessible from acceptance onwards (link, notes, preparation). Attendance (`AttendanceLog` JOIN) counts toward no-show detection only if it falls within **[start − 15 min, start + 15 min]**. The session becomes IN_PROGRESS when both have a counted JOIN. At start + 15 min the job decides: teacher missing → NO_SHOW_TEACHER; learner missing (teacher present) → NO_SHOW_LEARNER; both missing → NO_SHOW_BOTH.
+**Changed (team decision):** the room of an accepted session opens **15 minutes before the start** (`src/lib/attendance.ts`); before that both participants see a waiting page with a countdown, and the server refuses room data and workspace saves (`RoomNotOpenError`). The Meet link is given at acceptance (Q-34), so nothing needs the room earlier. After the session the room stays open as the archive. Attendance (`AttendanceLog` JOIN) counts toward no-show detection only if it falls within **[start − 15 min, start + 15 min]**. The session becomes IN_PROGRESS when both have a counted JOIN. At start + 15 min the job decides: teacher missing → NO_SHOW_TEACHER; learner missing (teacher present) → NO_SHOW_LEARNER; both missing → NO_SHOW_BOTH.
 
 ### Q-9 · FR-4.6 · Both participants absent `DEFAULT`
 Not covered by the SRS.

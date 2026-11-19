@@ -2,7 +2,8 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { COMPLETION_THRESHOLD_PERCENT, RELEASE_WINDOW_MINUTES } from "@/lib/rules";
 import { db } from "@/server/db";
 import { normalizeMeetUrl, MEET_URL_ERROR } from "@/lib/meeting-url";
-import { DomainError } from "@/server/errors";
+import { isRoomOpen, roomOpensAt } from "@/lib/attendance";
+import { DomainError, RoomNotOpenError } from "@/server/errors";
 import { withWalletTransaction } from "@/server/services/wallet/ledger";
 import { generateSessionSummaryAndQuiz } from "@/server/services/ai/summary-quiz-service";
 import { recordSessionAttendance } from "./cancellation-service";
@@ -84,6 +85,12 @@ export async function getSessionRoomData(
     );
   }
 
+  // Q-8 (changed): an accepted session's room opens 15 minutes before the start. Nothing is
+  // created or logged before that; the page shows a waiting screen instead.
+  if (session.status === "ACCEPTED" && !isRoomOpen(session.startAt, now)) {
+    throw new RoomNotOpenError(roomOpensAt(session.startAt));
+  }
+
   // Ensure workspace exists (FR-5.3)
   let workspace = session.workspace;
   if (!workspace) {
@@ -129,6 +136,49 @@ export async function getSessionRoomData(
     isLearner,
   };
 }
+
+/**
+ * Q-8: what the waiting page shows before the room opens. Same access rule as the room: only the
+ * session's teacher and learner.
+ */
+export async function getSessionWaitingInfo(sessionId: string, userId: string, client: PrismaClient = db) {
+  const session = await client.session.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      status: true,
+      startAt: true,
+      endAt: true,
+      durationMinutes: true,
+      goal: true,
+      meetingUrl: true,
+      teacherId: true,
+      learnerId: true,
+      skill: { select: { nameAr: true } },
+      teacher: { select: { displayName: true } },
+      learner: { select: { displayName: true } },
+    },
+  });
+  if (!session) throw new DomainError("NOT_FOUND", "الجلسة غير موجودة");
+  const isTeacher = session.teacherId === userId;
+  if (!isTeacher && session.learnerId !== userId) {
+    throw new DomainError("FORBIDDEN", "لا تملك صلاحية الوصول إلى غرفة هذه الجلسة");
+  }
+  return {
+    id: session.id,
+    startAt: session.startAt,
+    endAt: session.endAt,
+    opensAt: roomOpensAt(session.startAt),
+    durationMinutes: session.durationMinutes,
+    goal: session.goal,
+    meetingUrl: session.meetingUrl,
+    skillName: session.skill.nameAr,
+    partnerName: isTeacher ? session.learner.displayName : session.teacher.displayName,
+    isTeacher,
+  };
+}
+
+export type SessionWaitingInfo = Awaited<ReturnType<typeof getSessionWaitingInfo>>;
 
 // ─────────────────────────────────────────────────────────────
 // FR-5.2: External Call Link Management
@@ -188,6 +238,7 @@ export async function saveSessionWorkspace(
   userId: string,
   input: SaveWorkspaceInput,
   client: PrismaClient = db,
+  now: Date = new Date(),
 ) {
   const session = await client.session.findUnique({
     where: { id: input.sessionId },
@@ -199,6 +250,11 @@ export async function saveSessionWorkspace(
 
   if (session.teacherId !== userId && session.learnerId !== userId) {
     throw new DomainError("FORBIDDEN", "لا تملك صلاحية تعديل مساحة عمل هذه الجلسة");
+  }
+
+  // Q-8 (changed): no writing in a room that has not opened yet.
+  if (session.status === "ACCEPTED" && !isRoomOpen(session.startAt, now)) {
+    throw new RoomNotOpenError(roomOpensAt(session.startAt));
   }
 
   return client.$transaction(async (tx) => {

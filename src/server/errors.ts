@@ -10,6 +10,14 @@ export class DomainError extends Error {
   }
 }
 
+/** Q-8: the room of an accepted session is not open yet (opens 15 minutes before the start). */
+export class RoomNotOpenError extends DomainError {
+  constructor(readonly opensAt: Date) {
+    super("ROOM_NOT_OPEN", "غرفة الجلسة تُفتح قبل موعدها بـ 15 دقيقة");
+    this.name = "RoomNotOpenError";
+  }
+}
+
 export class InsufficientBalanceError extends DomainError {
   constructor(message = "الرصيد المتاح غير كافٍ") {
     super("INSUFFICIENT_BALANCE", message);

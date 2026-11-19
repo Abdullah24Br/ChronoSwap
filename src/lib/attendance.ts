@@ -11,3 +11,15 @@ export function isInAttendanceWindow(startAt: Date | string, at: Date | string):
   const time = new Date(at).getTime();
   return time >= start - graceMs && time <= start + graceMs;
 }
+
+/**
+ * Q-8 (changed): the room of an accepted session opens 15 minutes before the start, the same moment
+ * attendance starts to count. Before that the participants see a waiting page.
+ */
+export function roomOpensAt(startAt: Date | string): Date {
+  return new Date(new Date(startAt).getTime() - NO_SHOW_GRACE_MINUTES * 60 * 1000);
+}
+
+export function isRoomOpen(startAt: Date | string, now: Date = new Date()): boolean {
+  return now.getTime() >= roomOpensAt(startAt).getTime();
+}

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { RoomWaiting } from "@/components/sessions/room-waiting";
 import { SessionRoom } from "@/components/sessions/session-room";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCurrentUser } from "@/server/auth/session";
-import { DomainError } from "@/server/errors";
-import { getSessionRoomData } from "@/server/services/sessions/room-service";
+import { DomainError, RoomNotOpenError } from "@/server/errors";
+import { getSessionRoomData, getSessionWaitingInfo } from "@/server/services/sessions/room-service";
 import { AlertCircle, ArrowRight } from "lucide-react";
 
 export const instant = false;
@@ -33,6 +34,15 @@ export default async function SessionRoomPage({ params }: SessionRoomPageProps) 
   try {
     sessionData = await getSessionRoomData(id, user.id);
   } catch (err) {
+    // Q-8: the room opens 15 minutes before the start; until then show the waiting page.
+    if (err instanceof RoomNotOpenError) {
+      const info = await getSessionWaitingInfo(id, user.id);
+      return (
+        <main className="container mx-auto px-4 py-8">
+          <RoomWaiting key={info.id} info={info} timezone={user.timezone} />
+        </main>
+      );
+    }
     if (err instanceof DomainError) {
       if (err.code === "NOT_FOUND") {
         notFound();
